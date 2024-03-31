@@ -1,0 +1,74 @@
+{
+  "name": "backend-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "auth": "nodemon src/authServer.js",
+    "authorized": "node src/authServer.js",
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js",
+    "work": "nodemon src/worker.js",
+    "worker": "node src/worker.js",
+    "ami": "nodemon src/amiWorker.js",
+    "amiworker": "node src/amiWorker.js",
+    "c2c": "nodemon src/c2cWorker.js",
+    "c2cworker": "node src/c2cWorker.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Thanhthien94/app-nodejs.git"
+  },
+  "keywords": [
+    "app",
+    "api",
+    "backend",
+    "nodejs"
+  ],
+  "author": "thientruong",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Thanhthien94/app-nodejs/issues"
+  },
+  "homepage": "https://github.com/Thanhthien94/app-nodejs#readme",
+  "dependencies": {
+    "bluebird": "^3.7.2",
+    "cloudinary": "^1.41.0",
+    "express": "^4.18.2",
+    "express-actuator": "^1.8.4",
+    "express-zip": "^3.0.0",
+    "jssip": "^3.10.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "mysql": "^2.18.1",
+    "sip.js": "^0.21.2",
+    "winston-daily-rotate-file": "^4.7.1",
+    "yarn": "^1.22.19"
+  },
+  "devDependencies": {
+    "argon2": "^0.30.3",
+    "asterisk-ami": "^0.1.0",
+    "asterisk-manager": "^0.2.0",
+    "axios": "^1.6.2",
+    "chalk": "^5.3.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "eslint": "^8.45.0",
+    "exceljs": "^4.3.0",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.1",
+    "lodash": "^4.17.21",
+    "moment-timezone": "^0.5.43",
+    "mongoose": "^7.4.1",
+    "mongoose-paginate-v2": "^1.7.23",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^2.0.22",
+    "request": "^2.88.2",
+    "socket.io": "^4.7.1",
+    "urlencode": "^1.1.0",
+    "winston": "^3.10.0"
+  }
+}
