@@ -391,7 +391,7 @@ const migrateCDR = async (req, res) => {
     if(!req.query.fromDate) throw new Error('Please choose from date')
     const { id } = req.decode
     const infor = await UserModel.findById(id).populate('company')
-    if(infor?.company.statusMigrate) throw new Error('have 1 processing, please wait and try again later')
+    if(infor?.company?.statusMigrate) throw new Error('have 1 processing, please wait and try again later')
     const [users] = await Bluebird.all([
       UserModel.find().lean().exec(),
       // CustomerModel.find().lean().exec()
