@@ -109,7 +109,7 @@ export const getParamsCDRMongo = (req) => {
         ? {
             createdAt: {
               $gte: new Date(
-                new Date(req.query.gteDate).getTime() - 7 * 60 * 60 * 1000
+                new Date(req.query.gteDate).getTime()
               ),
             },
           }
@@ -118,7 +118,7 @@ export const getParamsCDRMongo = (req) => {
         ? {
             createdAt: {
               $lte: new Date(
-                new Date(req.query.lteDate).getTime() - 7 * 60 * 60 * 1000
+                new Date(req.query.lteDate).getTime()
               ),
             },
           }
