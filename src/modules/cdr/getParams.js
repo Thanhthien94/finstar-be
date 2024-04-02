@@ -60,3 +60,95 @@ export const getParamsCDR = (req) => {
     filter,
   };
 };
+
+export const getParamsCDRMongo = (req) => {
+  const filters = {};
+  const options = {};
+  // const role = {};
+
+  if (req.query.limit) {
+    options.limit = parseInt(req.query.limit);
+  } else options.limit = 20;
+
+  if (req.query.reverse) {
+    options.sort = { createdAt: -1 };
+  }
+
+  if (req.query.sortBy) {
+    options.sort = { [req.query.sortBy]: 1 };
+  }
+
+  if (req.query.sortOrder) {
+    options.sort[req.query.sortBy] = req.query.sortOrder === "desc" ? -1 : 1;
+  }
+
+  if (req.query.page) {
+    options.skip = (req.query.page - 1) * options.limit;
+  } else {
+    options.skip = 0;
+  }
+
+  if (
+    req.query._id ||
+    req.query.user ||
+    req.query.name ||
+    req.query.disposition ||
+    req.query.dst ||
+    req.query.gteDate ||
+    req.query.lteDate ||
+    req.query.gteStartTime ||
+    req.query.lteStartTime
+  ) {
+    filters.$and = [
+      req.query.user ? { user: req.query.user } : {},
+      req.query._id ? { user: req.query._id } : {},
+      req.query.name ? { name: req.query.name } : {},
+      req.query.disposition ? { disposition: req.query.disposition } : {},
+      req.query.dst ? { dst: req.query.dst } : {},
+      req.query.gteDate
+        ? {
+            createdAt: {
+              $gte: new Date(
+                new Date(req.query.gteDate).getTime() - 7 * 60 * 60 * 1000
+              ),
+            },
+          }
+        : {},
+      req.query.lteDate
+        ? {
+            createdAt: {
+              $lte: new Date(
+                new Date(req.query.lteDate).getTime() - 7 * 60 * 60 * 1000
+              ),
+            },
+          }
+        : {},
+      req.query.pathFile
+        ? req.query.pathFile === "yes"
+          ? { pathFile: { $ne: "" } }
+          : { pathFile: { $not: { $ne: "" } } }
+        : {},
+    ];
+  }
+
+  const keyword = req.query.keyword;
+  if (keyword) {
+    filters.$or = [
+      { name: { $regex: keyword, $options: "i" } },
+      { userName: { $regex: keyword, $options: "i" } },
+      { phone: { $regex: keyword, $options: "i" } },
+      { identification: { $regex: keyword, $options: "i" } },
+      { statusCode: { $regex: keyword, $options: "i" } },
+      { status: { $regex: keyword, $options: "i" } },
+      { codeSHB: { $regex: keyword, $options: "i" } },
+      { codeMAFC: { $regex: keyword, $options: "i" } },
+      { cnum: { $regex: keyword, $options: "i" } },
+      { dst: { $regex: keyword, $options: "i" } },
+    ];
+  }
+
+  return {
+    filters,
+    options,
+  };
+};

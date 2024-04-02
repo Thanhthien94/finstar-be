@@ -34,8 +34,6 @@ export const getParams = (req) => {
     req.query.bank ||
     req.query.name ||
     req.query.status ||
-    // req.query.disposition ||
-    req.query.dst ||
     req.query.autocallStatus ||
     req.query.role ||
     req.query.campaign ||
@@ -54,6 +52,7 @@ export const getParams = (req) => {
     req.query.typeCard
   ) {
     filters.$and = [
+      req.query.user ? { user: req.query.user } : {},
       req.query._id ? { _id: req.query._id } : {},
       req.query.project ? { project: req.query.project } : {},
       req.query.campaign ? { campaign: req.query.campaign } : {},
@@ -65,8 +64,6 @@ export const getParams = (req) => {
         : {},
       req.query.name ? { name: req.query.name } : {},
       req.query.status ? { status: req.query.status } : {},
-      req.query.disposition ? { disposition: req.query.disposition } : {},
-      req.query.dst ? { dst: req.query.dst } : {},
       req.query.autocallStatus ? { autocallStatus: req.query.autocallStatus } : {},
       req.query.role ? { role: req.query.role } : {},
       req.query.typeCard ? { "linkCard.type": req.query.typeCard } : {},
@@ -173,10 +170,6 @@ export const getParams = (req) => {
     ];
   }
 
-  if (req.query.dpd) {
-    filters.dpd = parseInt(req.query.dpd);
-  }
-
   const keyword = req.query.keyword;
   if (keyword) {
     filters.$or = [
@@ -184,12 +177,8 @@ export const getParams = (req) => {
       { userName: { $regex: keyword, $options: "i" } },
       { phone: { $regex: keyword, $options: "i" } },
       { identification: { $regex: keyword, $options: "i" } },
-      // { dpd: { $regex: parseInt(keyword) } },
       { statusCode: { $regex: keyword, $options: "i" } },
       { status: { $regex: keyword, $options: "i" } },
-      { codeSHB: { $regex: keyword, $options: "i" } },
-      { codeMAFC: { $regex: keyword, $options: "i" } },
-      { cnum: { $regex: keyword, $options: "i" } },
     ];
   }
 

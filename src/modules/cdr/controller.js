@@ -1,6 +1,6 @@
 import mysqlInstance from "../../controllers/mysql/index.js";
 import Bluebird from "bluebird";
-import { getParamsCDR } from "./getParams.js";
+import { getParamsCDRMongo } from "./getParams.js";
 import { getParams } from "../../util/getParams/index.js";
 import {
   UserModel,
@@ -66,19 +66,20 @@ const fetchCDRMongo = async (req, res) => {
     }
     if (rolePermit === "sales") {
       filterPlus = {
-        _id: id,
+        user: id,
       };
     }
 
     // fetch users
-    const users = await UserModel.find(filterPlus);
+    const users = await UserModel.find({...filters, ...filterPlus});
     const listID = users.map((item) => item._id);
     // console.log({listID})
 
     // fecth CDR start
-    const total = await CDRModel.count({ user: { $in: listID }, ...filters });
+    const filtersCDR = getParamsCDRMongo(req).filters
+    const total = await CDRModel.count({ user: { $in: listID }, ...filtersCDR });
     const result = await CDRModel.find(
-      { user: { $in: listID }, ...filters },
+      { user: { $in: listID }, ...filtersCDR },
       null,
       options
     ).populate("user", ["name"]);
