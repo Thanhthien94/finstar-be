@@ -199,7 +199,7 @@ import { populate } from "dotenv";
 const updateCDR = async () => {
   try {
     const getTime = JSON.stringify(
-      new Date(new Date().getTime() + 7 * 60 * 60 * 1000 - 5 * 60 * 1000)
+      new Date(new Date().getTime() + 7 * 60 * 60 * 1000 - 60 * 60 * 1000)
     ).slice(1, 20);
     console.log({ getTime });
     // const users = await UserModel.find().lean().exec();
@@ -322,7 +322,7 @@ const updateCDR = async () => {
   }
 };
 
-setInterval(updateCDR, 3 * 60 * 1000)
+setInterval(updateCDR, 1 * 60 * 1000)
 
 const fetchCDRToDownload = async (req, res) => {
   try {
