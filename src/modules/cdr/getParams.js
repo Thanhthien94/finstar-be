@@ -94,8 +94,8 @@ export const getParamsCDRMongo = (req) => {
     req.query.name ||
     req.query.disposition ||
     req.query.dst ||
-    req.query.gteDate ||
-    req.query.lteDate ||
+    req.query.fromDate ||
+    req.query.toDate ||
     req.query.gteStartTime ||
     req.query.lteStartTime
   ) {
@@ -105,20 +105,20 @@ export const getParamsCDRMongo = (req) => {
       req.query.name ? { name: req.query.name } : {},
       req.query.disposition ? { disposition: req.query.disposition } : {},
       req.query.dst ? { dst: req.query.dst } : {},
-      req.query.gteDate
+      req.query.fromDate
         ? {
             createdAt: {
               $gte: new Date(
-                new Date(req.query.gteDate).getTime()
+                new Date(req.query.fromDate).getTime()
               ),
             },
           }
         : {},
-      req.query.lteDate
+      req.query.toDate
         ? {
             createdAt: {
               $lte: new Date(
-                new Date(req.query.lteDate).getTime()
+                new Date(req.query.toDate).getTime()
               ),
             },
           }
