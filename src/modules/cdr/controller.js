@@ -1,6 +1,6 @@
 import mysqlInstance from "../../controllers/mysql/index.js";
 import Bluebird from "bluebird";
-import { getParamsCDRMongo } from "./getParams.js";
+import { getParamsCDRMongo, getParamsCDR } from "./getParams.js";
 import { getParams } from "../../util/getParams/index.js";
 import {
   UserModel,
@@ -950,7 +950,7 @@ const fetchTalkTime = async (req, res) => {
         const userCnum = {
           cnum: user.sipAccount.extension,
           name: user.name,
-          unitPrice: user.company.unitPrice,
+          unitPrice: user.company?.unitPrice,
         };
         usersCnum.push(userCnum);
         if (listCnum.length < 1) {
@@ -1368,7 +1368,7 @@ const aggregateCDRLatest = async (req, res) => {
         const userCnum = {
           cnum: user.sipAccount.extension,
           name: user.name,
-          unitPrice: user.company.unitPrice,
+          unitPrice: user.company?.unitPrice,
         };
         usersCnum.push(userCnum);
         if (listCnum.length < 1) {
@@ -1618,6 +1618,7 @@ const aggregateCDRAmPm = async (req, res) => {
       users = await UserModel.findById(id).populate("company");
     } else {
       users = await UserModel.find(filterPlus).populate("company");
+      // console.log('users: ', users)
     }
 
     let listCnum = "";
@@ -1627,8 +1628,9 @@ const aggregateCDRAmPm = async (req, res) => {
         const userCnum = {
           cnum: user.sipAccount.extension,
           name: user.name,
-          unitPrice: user.company.unitPrice,
+          unitPrice: user.company?.unitPrice,
         };
+        if( !user.company) console.log('userNotUnitprice: ', user)
         usersCnum.push(userCnum);
         if (listCnum.length < 1) {
           listCnum = listCnum + user.sipAccount.extension;
@@ -1801,6 +1803,7 @@ const aggregateCDRAmPm = async (req, res) => {
       },
     });
   } catch (error) {
+    console.log({error})
     res.status(400).json({
       success: false,
       message: `Can not fetch aggregateCDR - ${error.message}`,
