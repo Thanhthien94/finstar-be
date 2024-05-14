@@ -235,7 +235,7 @@ const updateCDR = async () => {
 
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
-        `SELECT calldate, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
+        `SELECT calldate, src, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
     console.log({ results });

@@ -10,7 +10,6 @@ import { UserModel } from "./models/User.js";
 import { TimeGroupModel } from "./models/TimeGroup.js";
 import { CustomerModel } from "./models/Customer.js";
 import { CompanyModel } from "./models/Company.js";
-import { ReferenceModel } from "./models/Reference.js";
 import { LinkCardModel } from "./models/LinkCard.js"
 import { BankModel } from "./models/Bank.js";
 import { UserRequestModel } from "./models/UserRequest.js";
@@ -18,6 +17,9 @@ import { DashBoardModel } from "./models/DashBoard.js";
 import { TaskModel } from "./models/Task.js";
 import { CDRModel } from "./models/CDR.js";
 import { AutoCallModel } from "./models/AutoCall.js";
+import { SipModel } from "./models/PBX.js";
+import { PbxModel } from "./models/SIP.js";
+import { RoleModel } from "./models/Role.js";
 
 // const OPPTIONS = {
 //   useNewUrlParser: true,
@@ -87,12 +89,14 @@ export {
   UserRequestModel,
   CustomerModel,
   TimeGroupModel,
-  ReferenceModel,
   CompanyModel,
   LinkCardModel,
   BankModel,
   DashBoardModel,
   TaskModel,
   CDRModel,
-  AutoCallModel
+  AutoCallModel,
+  PbxModel,
+  RoleModel,
+  SipModel,
 }

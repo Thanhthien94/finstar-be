@@ -12,113 +12,51 @@ import moment from "../../util/monent/moment.js";
 const { generateToken } = auth
 const createUser = async (req, res) => {
   let {
-    userName,
+    username,
     password,
-    name,
+    firstname,
+    lastname,
     phone,
     company,
     hometown,
-    adminTag,
-    ADPTag,
-    headTag,
-    ASMTag,
-    supervisorTag,
-    teamleadTag,
     identification,
     role,
     type,
     title,
-    sipUser,
-    sipPassword,
-    sipServer,
   } = req.body;
   //simple validation
   console.log(req.body);
-  if (!userName || !password) {
+  if (!username || !password) {
     return res
       .status(400)
-      .json({ success: false, message: "Missing userName or Password" });
+      .json({ success: false, message: "Missing username or password" });
   }
   try {
-    const user = await UserModel.findOne({ userName });
+    const user = await UserModel.findOne({ username });
     if (user) {
       throw new Error("User already exists");
     }
-    const roleList = ["sales", "teamlead", "supervisor", "ASM", "head", "ADP"];
-    const level = await roleList.indexOf(role);
-    let i = level + 1;
-    // console.log({ level });
-
-    do {
-      if (i === 2 && teamleadTag) {
-        const findUser = await UserModel.findById(teamleadTag);
-        supervisorTag = findUser.supervisorTag;
-      }
-      if (i === 3 && supervisorTag) {
-        const findUser = await UserModel.findById(supervisorTag);
-        ASMTag = findUser.ASMTag;
-      }
-      if (i === 4 && ASMTag) {
-        const findUser = await UserModel.findById(ASMTag);
-        headTag = findUser.headTag;
-      }
-      if (i === 5 && headTag) {
-        const findUser = await UserModel.findById(headTag);
-        ADPTag = findUser.ADPTag;
-      }
-      i += 1;
-      // console.log("loop i: ", i);
-    } while (i <= 5);
-
     //All good
     const hashedPassword = await argon2.hash(password);
 
     // console.log({hashedPassword})
-    const findCompany = await CompanyModel.findById(company);
-    const code = `${findCompany.name.slice(0, 2)}${findCompany.countCode}`;
-    const newUser = (
-      await UserModel.create({
-        userName,
-        password: hashedPassword,
-        name,
-        phone,
-        company,
-        code,
-        hometown,
-        adminTag,
-        ADPTag,
-        headTag,
-        ASMTag,
-        supervisorTag,
-        teamleadTag,
-        identification,
-        role,
-        type,
-        title,
-        sipAccount: {
-          extension: sipUser,
-          password: sipPassword,
-          server: sipServer,
-        },
-      })
-    ).toObject({ versionKey: false });
-    let roleTag = ''
-    if(role==='teamlead') {
-      roleTag = 'teamleadTag'
-    } else if (role === 'supervisor') {
-      roleTag = 'supervisorTag'
-    } else if (role === 'ASM') {
-      roleTag = 'ASMTag'
-    } else if (role === 'head') {
-      roleTag = 'headTag'
-    } else if (role === 'ADP') {
-      roleTag = 'ADPTag'
+    const dataCreate = {
+      username,
+      password: hashedPassword,
+      firstname,
+      lastname,
+      email: username,
+      phone,
+      company,
+      hometown,
+      identification,
+      role,
+      type,
+      title,
     }
-    const findID = await UserModel.findOne({userName})
-    if(findID) await UserModel.findOneAndUpdate({userName}, {[roleTag]:findID._id})
-    await CompanyModel.findByIdAndUpdate(company, {
-      countCode: findCompany.countCode + 1,
-    });
+    const newUser = (
+      await UserModel.create(dataCreate)
+    ).toObject({ versionKey: false });
     res
       .status(200)
       .json({ success: true, message: "User is created", data: newUser });
@@ -224,23 +162,16 @@ const getUser = async (req, res) => {
       const id = req.query.id;
       user = await UserModel.findById(id)
         .populate("company")
-        .populate("headTag", ["name"])
-        .populate("ASMTag", ["name"])
-        .populate("supervisorTag", ["name"])
-        .populate("teamleadTag", ["name"]);
     } else {
       const { id } = req.decode;
       user = await UserModel.findById(id)
         .populate("company")
-        .populate("headTag", ["name"])
-        .populate("ASMTag", ["name"])
-        .populate("supervisorTag", ["name"])
-        .populate("teamleadTag", ["name"]);
     }
     res
       .status(200)
       .json({ success: true, message: "Get user is successful", data: user });
   } catch (error) {
+    console.log('error: ', error)
     res.status(400).json({ success: false, message: error.message });
   }
 };

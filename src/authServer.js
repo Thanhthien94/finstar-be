@@ -43,21 +43,22 @@ app.use(hidePoweredBy()); // Hidden detail version Sever
 app.use(frameguard()); // On Secure Mode Clickjacking
 
 server.listen(port, () => console.log(`Auth server listening on port ${port}`));
-mongodb.connect();
+await mongodb.connect();
 
-const updateRefreshToken = async (userName, refreshToken) => {
-  console.log({ userName, refreshToken });
-  await UserModel.findOneAndUpdate({ userName }, { refreshToken });
+const updateRefreshToken = async (username, refreshToken) => {
+  console.log({ username, refreshToken });
+  const update = await UserModel.findOneAndUpdate({ username }, { refreshToken });
+  return update
 };
 
 const { generateToken, verifyToken } = auth;
 app.post("/auth/login", async (req, res) => {
   try {
-    const { userName, password } = req.body;
-    if (!userName || !password) {
-      throw new Error("userName or Password is missing");
+    const { username, password } = req.body;
+    if (!username || !password) {
+      throw new Error("username or password is missing");
     } else {
-      const user = await UserModel.findOne({ userName });
+      const user = await UserModel.findOne({ username });
       if (user.status === 'Locked') throw new Error('User has been locked')
       if (!user) {
         throw new Error("User or Password is not valid");
@@ -68,17 +69,29 @@ app.post("/auth/login", async (req, res) => {
           throw new Error("User or Password is not valid");
         } else {
           const tokens = generateToken(user);
-          updateRefreshToken(userName, tokens.refreshToken);
+          await updateRefreshToken(username, tokens.refreshToken);
+          const data = {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            phone: user.phone,
+            refreshToken: tokens.refreshToken,
+            token: tokens.accessToken,
+            role: user.role,
+            firstname: user.firstname,
+            lastname: user.lastname,
+          };
           res.status(200).json({
             success: true,
             message: "user logger in ok",
-            data: tokens,
+            data,
           });
         }
       }
     }
   } catch (error) {
     res.status(404).json({ success: false, message: error.message, data: "" });
+    console.error(error)
   }
 });
 app.post("/auth/token", async (req, res) => {

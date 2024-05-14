@@ -7,7 +7,7 @@ const Schema = mongoose.Schema;
 const UserRequestSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: USER_MODEL },
-    userName: {type: String},
+    username: {type: String},
     requestConnection: {type: Schema.Types.Mixed, default: {} },
     requestInfo: {type: Schema.Types.Mixed, default: {} },
   },
