@@ -1146,7 +1146,7 @@ const getCustomerList = async (req, res) => {
     const user = await UserModel.findById(id).populate("company").lean().exec();
     // console.log({ role, id, user });
 
-    const companyTag = user.company;
+    const companyTag = user?.company;
     const headTag = id;
     const ASMTag = id;
     const supervisorTag = id;
@@ -1368,9 +1368,7 @@ const customerInfo = async (req, res) => {
       .populate("teamleadTag", ["name"])
       .populate("supervisorTag", ["name"])
       .populate("user", ["name"]);
-    const reference = await ReferenceModel.find({ customerId: _id });
-    // console.log({customer, reference})
-    const data = { customer, reference };
+    const data = {customer} ;
     res
       .status(200)
       .json({ success: true, message: "Find customer by _id is ok", data });

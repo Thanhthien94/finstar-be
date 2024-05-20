@@ -1,14 +1,24 @@
 import mongoose, { model } from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
-import { PBX_MODEL } from "../constant.js";
+import { SIP_MODEL, COMPANY_MODEL, PBX_MODEL, USER_MODEL } from "../constant.js";
 
 const Schema = mongoose.Schema;
 
-const PbxSchema = new Schema(
+const SipSchema = new Schema(
   {
-    extension: { type: Number, require: true },
+    extension: { type: String, require: true },
     password: {type: String, },
-    pbx: { type: Schema.Types.ObjectId, ref: PBX_MODEL }
+    status: {type: Boolean, default: true },
+    company: {type: Schema.Types.ObjectId, ref: COMPANY_MODEL},
+    pbx: { type: Schema.Types.ObjectId, ref: PBX_MODEL },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: USER_MODEL,
+    },
+    usersTag: [{
+      type: Schema.Types.ObjectId,
+      ref: USER_MODEL,
+    }],
   },
   {
     minimize: false,
@@ -16,10 +26,10 @@ const PbxSchema = new Schema(
   }
 );
 
-PbxSchema.index({ name: 1 });
-PbxSchema.plugin(mongoosePaginate);
+SipSchema.index({ name: 1 });
+SipSchema.plugin(mongoosePaginate);
 
 // interface UserModel<T extends Document> extends PaginateModel<T> {};
-const PbxModel = model(PBX_MODEL, PbxSchema);
+const SipModel = model(SIP_MODEL, SipSchema);
 
-export { PbxModel, PbxSchema };
+export { SipModel, SipSchema };

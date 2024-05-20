@@ -9,6 +9,9 @@ import {
   UserModel,
   CDRModel,
   CustomerModel,
+  SipModel,
+  TelcoModel,
+  BillModel,
   // CompanyModel,
   // ReferenceModel,
   // LinkCardModel,
@@ -210,16 +213,26 @@ const updateCDR = async () => {
     ]);
     // console.log({ users });
 
-    let listCnum = "";
-    for (const user of users) {
-      if (user.sipAccount.extension) {
-        if (listCnum.length < 1) {
-          listCnum = listCnum + user.sipAccount.extension;
-        } else {
-          listCnum = listCnum + "," + user.sipAccount.extension;
-        }
-      }
-    }
+    // let listCnum = "";
+    // for (const user of users) {
+    //   if (user.sipAccount.extension) {
+    //     if (listCnum.length < 1) {
+    //       listCnum = listCnum + user.sipAccount.extension;
+    //     } else {
+    //       listCnum = listCnum + "," + user.sipAccount.extension;
+    //     }
+    //   }
+    // }
+    const options = {}
+    options.sort = { createdAt: -1 }
+    const priceViettel = await BillModel.find({type: 'priceViettel'},null, options)
+    const priceVinaphone = await BillModel.find({type: 'priceVinaphone'},null, options)
+    const priceMobifone = await BillModel.find({ type: 'priceMobifone'},null, options)
+    const priceOthers = await BillModel.find({type: 'priceOthers'},null, options)
+    const telco = await TelcoModel.find().lean().exec();
+    const {viettel, vinaphone, mobifone, others} = telco[0]
+    const SIPs = await SipModel.find().populate("user").populate("usersTag")
+    const listCnum = SIPs.map(item => item.extension)
     if (!listCnum && !users.toString()) throw new Error("List not exist");
     // if (!req.query.cnum) {
     //   req.query.cnum = listCnum;
@@ -245,13 +258,35 @@ const updateCDR = async () => {
     // (results) &&
     for (const result of results) {
       const dst = result.dst;
+      const checkNumber = result.dst.slice(0, 3)
+      let telco = "";
+      let bill = ""
       const customer = await CustomerModel.findOne({ phone: dst });
-      const user = users.find(
-        (user) => user.sipAccount?.extension === result.cnum
-      )._id;
-      const name = users.find(
-        (user) => user.sipAccount?.extension === result.cnum
-      ).name;
+      const user = SIPs.find(
+        (sip) => sip.extension === result.cnum
+      ).user?._id;
+      const usersTag = SIPs.find(
+        (sip) => sip.extension === result.cnum
+      ).usersTag?.map(item => item._id);
+      const name = SIPs.find(
+        (sip) => sip.extension === result.cnum
+      ).user?.name;
+      if(viettel.includes(checkNumber)) {
+        telco = 'viettel'
+        bill = Number(result.billsec) * Number(priceViettel)
+      }
+      if(vinaphone.includes(checkNumber)) {
+        telco = 'vinaphone'
+        bill = Number(result.billsec) * Number(priceVinaphone)
+      }
+      if(mobifone.includes(checkNumber)) {
+        telco = 'mobifone'
+        bill = Number(result.billsec) * Number(priceMobifone)
+      }
+      if(others.includes(checkNumber)) {
+        telco = 'others'
+        bill = Number(result.billsec) * Number(priceOthers)
+      }
       const dstName = customer?.name;
       const dstID =
         (customer?.userTag &&
@@ -289,14 +324,17 @@ const updateCDR = async () => {
       const createdAt = result.calldate;
       const data = {
         user,
+        usersTag,
         name,
         dstName,
         dstID,
         cnum,
         cnam,
         dst,
+        telco,
         duration,
         billsec,
+        bill,
         disposition,
         lastapp,
         linkRecord,
@@ -389,37 +427,47 @@ const migrateCDR = async (req, res) => {
     // const customers = await CustomerModel.find().lean().exec();
     console.log('query: ', req.query)
     if(!req.query.fromDate) throw new Error('Please choose from date')
-    const { id } = req.decode
+      const { id } = req.decode
     const infor = await UserModel.findById(id).populate('company')
     if(infor?.company?.statusMigrate) throw new Error('have 1 processing, please wait and try again later')
-    const [users] = await Bluebird.all([
-      UserModel.find().lean().exec(),
-      // CustomerModel.find().lean().exec()
-    ]);
-    console.log({ users });
-
-    let listCnum = "";
-    for (const user of users) {
-      if (user.sipAccount.extension) {
-        if (listCnum.length < 1) {
-          listCnum = listCnum + user.sipAccount.extension;
-        } else {
-          listCnum = listCnum + "," + user.sipAccount.extension;
-        }
-      }
-    }
+      const [users] = await Bluebird.all([
+    UserModel.find().lean().exec(),
+    // CustomerModel.find().lean().exec()
+  ]);
+  // console.log({ users });
+  
+  // let listCnum = "";
+  // for (const user of users) {
+  //   if (user.sipAccount.extension) {
+  //     if (listCnum.length < 1) {
+  //       listCnum = listCnum + user.sipAccount.extension;
+  //     } else {
+  //       listCnum = listCnum + "," + user.sipAccount.extension;
+  //     }
+  //   }
+  // }
+  const options = {}
+    options.sort = { createdAt: -1 }
+    const priceViettel = await BillModel.findOne({type: 'priceViettel'},null, options)
+    const priceVinaphone = await BillModel.findOne({type: 'priceVinaphone'},null, options)
+    const priceMobifone = await BillModel.findOne({ type: 'priceMobifone'},null, options)
+    const priceOthers = await BillModel.findOne({type: 'priceOthers'},null, options)
+  const telco = await TelcoModel.find().lean().exec();
+    const {viettel, vinaphone, mobifone, others} = telco[0]
+  const SIPs = await SipModel.find().populate("user").populate("usersTag")
+    const listCnum = SIPs.map(item => item.extension)
     if (!listCnum && !users.toString()) throw new Error("List not exist");
-    if (!req.query.cnum) {
-      req.query.cnum = listCnum;
-    }
-    req.query.lastapp = "Dial";
-
-    // fecth CDR start
-    // const newDate = new Date();
-    // const fromDate = new Date(new Date().getTime() - 4 * 24 * 60 * 60 * 1000);
-    // req.query.fromDate = fromDate;
-    const { filter } = getParamsCDR(req);
-    console.log({ filter });
+  if (!req.query.cnum) {
+    req.query.cnum = listCnum;
+  }
+  req.query.lastapp = "Dial";
+  
+  // fecth CDR start
+  // const newDate = new Date();
+  // const fromDate = new Date(new Date().getTime() - 4 * 24 * 60 * 60 * 1000);
+  // req.query.fromDate = fromDate;
+  const { filter } = getParamsCDR(req);
+  console.log({ filter });
 
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
@@ -433,13 +481,43 @@ const migrateCDR = async (req, res) => {
     // (results) &&
     for (const result of results) {
       const dst = result.dst;
+      const checkNumber = result.dst.slice(0, 3)
+      let telco = "";
+      let bill = ""
       const customer = await CustomerModel.findOne({ phone: dst });
-      const user = users.find(
-        (user) => user.sipAccount?.extension === result.cnum
-      )._id;
-      const name = users.find(
-        (user) => user.sipAccount?.extension === result.cnum
-      ).name;
+      const user = SIPs.find(
+        (sip) => sip.extension === result.cnum
+      ).user?._id;
+      const usersTag = SIPs.find(
+        (sip) => sip.extension === result.cnum
+      ).usersTag?.map(item => item._id);
+      const name = SIPs.find(
+        (sip) => sip.extension === result.cnum
+      ).user?.name;
+      if(viettel.includes(checkNumber)) {
+        telco = 'viettel'
+        bill = Number(result.billsec) <= 6
+                ? (Number(priceViettel?.price || 0) / 60) * 6
+                : (Number(priceViettel?.price || 0) / 60) * Number(result.billsec);
+      }
+      if(vinaphone.includes(checkNumber)) {
+        telco = 'vinaphone'
+        bill = Number(result.billsec) <= 6
+                ? (Number(priceVinaphone?.price || 0) / 60) * 6
+                : (Number(priceVinaphone?.price || 0) / 60) * Number(result.billsec);
+      }
+      if(mobifone.includes(checkNumber)) {
+        telco = 'mobifone'
+        bill = Number(result.billsec) <= 6
+                ? (Number(priceMobifone?.price || 0) / 60) * 6
+                : (Number(priceMobifone?.price || 0) / 60) * Number(result.billsec);
+      }
+      if(others.includes(checkNumber)) {
+        telco = 'others'
+        bill = Number(result.billsec) <= 6
+                ? (Number(priceOthers?.price || 0) / 60) * 6
+                : (Number(priceOthers?.price || 0) / 60) * Number(result.billsec);
+      }
       const dstName = customer?.name;
       const dstID =
         (customer?.userTag &&
@@ -477,14 +555,17 @@ const migrateCDR = async (req, res) => {
       const createdAt = result.calldate;
       const data = {
         user,
+        usersTag,
         name,
         dstName,
         dstID,
         cnum,
         cnam,
         dst,
+        telco,
         duration,
         billsec,
+        bill,
         disposition,
         lastapp,
         linkRecord,

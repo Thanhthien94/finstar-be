@@ -7,11 +7,11 @@ import {
 
 const generateToken = (payload) => {
   // console.log(payload);
-  const { id, userName, role } = payload;
-  const accessToken = jwt.sign({ id, userName, role }, ACCESS_TOKEN_SECRET, {
+  const { id, username, role } = payload;
+  const accessToken = jwt.sign({ id, username, role }, ACCESS_TOKEN_SECRET, {
     expiresIn: "24h",
   });
-  const refreshToken = jwt.sign({ id, userName, role }, REFRESH_TOKEN_SECRET, {
+  const refreshToken = jwt.sign({ id, username, role }, REFRESH_TOKEN_SECRET, {
     expiresIn: "240h",
   });
   // console.log({accessToken})

@@ -55,11 +55,13 @@ const { generateToken, verifyToken } = auth;
 app.post("/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log('body: ', req.body)
     if (!username || !password) {
       throw new Error("username or password is missing");
     } else {
-      const user = await UserModel.findOne({ username });
-      if (user.status === 'Locked') throw new Error('User has been locked')
+      const user = await UserModel.findOne({ username }).populate('role')
+      const roles = user.role.map(item => item.name)
+      if (user?.status === 'Locked') throw new Error('User has been locked')
       if (!user) {
         throw new Error("User or Password is not valid");
       } else {
@@ -68,7 +70,7 @@ app.post("/auth/login", async (req, res) => {
         if (!passwordValid) {
           throw new Error("User or Password is not valid");
         } else {
-          const tokens = generateToken(user);
+          const tokens = generateToken({...user, role: roles});
           await updateRefreshToken(username, tokens.refreshToken);
           const data = {
             _id: user._id,
@@ -83,7 +85,7 @@ app.post("/auth/login", async (req, res) => {
           };
           res.status(200).json({
             success: true,
-            message: "user logger in ok",
+            message: "Đăng nhập thành công",
             data,
           });
         }

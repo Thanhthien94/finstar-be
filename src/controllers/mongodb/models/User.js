@@ -33,7 +33,7 @@ const UserSchema = new Schema(
     note: [{ type: Schema.Types.Mixed, default: {} }],
     refreshToken: { type: String, default: null },
     sipAccount: { type: Schema.Types.ObjectId, ref: SIP_MODEL },
-    userTag: [{ type: Schema.Types.ObjectId, ref: USER_MODEL }],
+    usersTag: [{ type: Schema.Types.ObjectId, ref: USER_MODEL }],
   },
   {
     minimize: false,

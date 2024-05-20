@@ -9,6 +9,7 @@ const CompanySchema = new Schema(
     name: { type: String, require: true },
     info: { type: Schema.Types.Mixed, default: {} },
     image: { type: Schema.Types.Mixed },
+    sipPrice: { type: Schema.Types.Mixed },
     color: { type: String, default: 'green' },
     permission: [{type: String, default: ""}],
     countCode: { type: Number, default: 1000 },

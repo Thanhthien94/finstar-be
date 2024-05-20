@@ -17,9 +17,12 @@ import { DashBoardModel } from "./models/DashBoard.js";
 import { TaskModel } from "./models/Task.js";
 import { CDRModel } from "./models/CDR.js";
 import { AutoCallModel } from "./models/AutoCall.js";
-import { SipModel } from "./models/PBX.js";
-import { PbxModel } from "./models/SIP.js";
+import { SipModel } from "./models/SIP.js";
+import { PbxModel } from "./models/PBX.js";
+import { TelcoModel } from "./models/Telco.js";
 import { RoleModel } from "./models/Role.js";
+import { BillModel } from "./models/Bill.js";
+import { AccessibilityModel } from "./models/Accessibility.js";
 
 // const OPPTIONS = {
 //   useNewUrlParser: true,
@@ -36,13 +39,13 @@ class Mongoose {
     mongoose.Promise = global.Promise;
     mongoose.set("debug", isEqual(LOG_LEVEL, "debug"));
     mongoose.connect(MONGO_URL,{
-      connectTimeoutMS: 240 * 1000,
+      connectTimeoutMS: 2400 * 1000,
     });
     mongoose.connection
       .on("open", () =>
         console.log(`${moment.formatTime(Date.now())}: Mongoose connected.`)
       )
-      .on("error", (error) => console.log(error))
+      .on("error", (error) => console.error(error))
       .on("reconnected", () =>
         console.log(`${moment.formatTime(Date.now())}: Mongoose reconnected.`)
       )
@@ -97,6 +100,9 @@ export {
   CDRModel,
   AutoCallModel,
   PbxModel,
+  TelcoModel,
   RoleModel,
   SipModel,
+  BillModel,
+  AccessibilityModel,
 }
