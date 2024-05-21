@@ -293,7 +293,7 @@ const getCompanies = async (req, res) => {
     //   throw new Error("User is not access");
     let filter = {};
     const user = await UserModel.findById(id);
-    if (role === "admin") filter = { _id: user.company };
+    if (!role.includes("root")) throw new Error("User is not access");
     const data = await CompanyModel.find(filter);
     res.status(200).json({ success: true, message: "Company created", data });
   } catch (error) {
@@ -312,8 +312,7 @@ const updateCompanies = async (req, res) => {
     const { viettel, vinaphone, mobifone, others } = sipPrice;
     if (!viettel || !vinaphone || !mobifone || !others)
       throw new Error("Vui lòng nhập đủ 4 trường thông tin");
-    if (role !== "root" && role !== "admin")
-      throw new Error("User is not access");
+    if (!role.includes("root")) throw new Error("User is not access");
     await CompanyModel.findByIdAndUpdate(id, { sipPrice, rule, color });
     res.status(200).json({ success: true, message: "Update Successful" });
   } catch (error) {
