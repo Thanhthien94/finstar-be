@@ -32,14 +32,79 @@ const upadateFetchCustomers = async (data) => {
 
 const fetchCDRMongo = async (req, res) => {
   try {
+    const {role, _id} = req.decode
+    const user = await UserModel.findById(_id)
+    const filter = {};
+    if (!role.includes("root")) filter.company = user?.company
     // fecth CDR start
     const {filters, options} = getParamsCDRMongo(req)
-    const total = await CDRModel.count(filters);
+    const total = await CDRModel.count({$and: [filters, filter]});
     const result = await CDRModel.find(
-      filters,
+      {$and: [filters, filter]},
       null,
       options
     ).populate("user", ["name"]);
+    const analysBill = await CDRModel.aggregate([
+      {
+          $match: {
+              $and: [{disposition: "ANSWERED"}, filter, filters]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+          }
+      },
+      {
+          $group: {
+              _id: "$telco",  // Nhóm theo trường 'company'
+              totalBill: {
+                  $sum: {
+                      $toDouble: "$bill"  // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+                  }
+              }
+          }
+      },
+      {
+        $group: {
+          _id: null,  // Không nhóm theo trường nào cả
+          totalBillSum: {
+            $sum: "$totalBill"  // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+          },
+          telcoBills: {
+            $push: {
+              telco: "$_id", 
+              totalBill: "$totalBill"
+            }
+          }
+        }
+      }
+  ])
+    const analysDisposition = await CDRModel.aggregate([
+      {
+          $match: {
+              $and: [filter, filters]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+          }
+      },
+      {
+          $group: {
+              _id: "$disposition",  // Nhóm theo trường 'company'
+              call: {
+                  $sum : 1
+              }
+          }
+      },
+      {
+        $group: {
+          _id: null,  // Không nhóm theo trường nào cả
+          totalCall: {
+            $sum: "$call"  // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+          },
+          dispositions: {
+            $push: {
+              disposition: "$_id", 
+              call: "$call"
+            }
+          }
+        }
+      }
+  ])
+  // console.log('analysDisposition: ', analysDisposition)
     res.status(200).json({
       success: true,
       message: "get list cdr successful",
@@ -48,6 +113,8 @@ const fetchCDRMongo = async (req, res) => {
         count: result?.length,
         page: options?.skip + 1,
         limit: options?.limit,
+        analysBill,
+        analysDisposition,
         data: result,
       },
     });

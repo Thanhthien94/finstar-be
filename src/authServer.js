@@ -70,7 +70,8 @@ app.post("/auth/login", async (req, res) => {
         if (!passwordValid) {
           throw new Error("User or Password is not valid");
         } else {
-          const tokens = generateToken({...user, role: roles});
+          console.log('user: ', user)
+          const tokens = generateToken({_id: user._id, username: user.username, role: roles});
           await updateRefreshToken(username, tokens.refreshToken);
           const data = {
             _id: user._id,
@@ -107,7 +108,7 @@ app.post("/auth/token", async (req, res) => {
     if (!user) throw new Error("refreshToken is not valid");
 
     const tokens = generateToken(user);
-    updateRefreshToken(user.userName, tokens.refreshToken);
+    updateRefreshToken(user.username, tokens.refreshToken);
     res.status(200).json({
       success: true,
       message: "refresh new token is ok",

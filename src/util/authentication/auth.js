@@ -7,11 +7,11 @@ import {
 
 const generateToken = (payload) => {
   // console.log(payload);
-  const { id, username, role } = payload;
-  const accessToken = jwt.sign({ id, username, role }, ACCESS_TOKEN_SECRET, {
+  const { _id, username, role } = payload;
+  const accessToken = jwt.sign({ _id, username, role }, ACCESS_TOKEN_SECRET, {
     expiresIn: "24h",
   });
-  const refreshToken = jwt.sign({ id, username, role }, REFRESH_TOKEN_SECRET, {
+  const refreshToken = jwt.sign({ _id, username, role }, REFRESH_TOKEN_SECRET, {
     expiresIn: "240h",
   });
   // console.log({accessToken})
@@ -37,7 +37,7 @@ const verifyToken = async (req, res, next) => {
     // console.log({platform, browser})
     decode = jwt.verify(token, ACCESS_TOKEN_SECRET);
     // console.log('decode: ',decode);
-    const id = decode.id;
+    const id = decode._id;
     const userName = decode.userName;
     await UserRequestModel.create({
       userId: id,

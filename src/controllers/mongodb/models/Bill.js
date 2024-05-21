@@ -27,6 +27,8 @@ const BillSchema = new Schema(
       ],
     },
     price: { type: Number, default: 0 },
+    totalBill: { type: Number, default: 0 },
+    surplus: { type: Number },
     user: { type: Schema.Types.ObjectId, ref: USER_MODEL },
     company: { type: Schema.Types.ObjectId, ref: COMPANY_MODEL },
   },

@@ -251,7 +251,7 @@ const updateCDR = async () => {
         `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
-    console.log({ results });
+    // console.log({ results });
     // let resultMapUser = [];
     let lastData = [];
     // if (results)
@@ -364,7 +364,7 @@ const updateCDR = async () => {
       }
     }
 
-    console.log({ lastData });
+    // console.log({ lastData });
     await CDRModel.insertMany(lastData);
   } catch (error) {
     console.log(new Date(),': ==========*********=========== Update CDR failed ==========*********===========',error.message);
@@ -602,7 +602,7 @@ const migrateCDR = async (req, res) => {
       }
 
     }
-    console.log({ lastData });
+    // console.log({ lastData });
     await CDRModel.insertMany(lastData);
     res.status(200).json({
       success: true,

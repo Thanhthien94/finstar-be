@@ -7,6 +7,7 @@ import {
   PbxModel,
   TelcoModel,
   BillModel,
+  CDRModel,
 } from "../../controllers/mongodb/index.js";
 // import { CompanyModel } from "../../controllers/mongodb/models/Company.js";
 import { getParams } from "../../util/getParams/index.js";
@@ -642,17 +643,68 @@ const createNewBillInfo = async (req, res) => {
 };
 
 const getBillInfo = async (req, res) => {
-  const { role } = req.decode;
+  const { role, _id } = req.decode;
+  const {options} = getParams(req)
   try {
-    if (!role.includes("root")) throw new Error("User is not access");
-    let filter = {};
-    const deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]}).populate('company').populate('user');
-    const create = await BillModel.find({$and: [filter, {type: {$in: ['createViettel', 'createVinaphone', 'createMobifone', 'createOthers']}}]}).populate('company').populate('user');
-    const sub = await BillModel.find({$and: [filter, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]}).populate('company').populate('user');
-    const price = await BillModel.find({$and: [filter, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]}).populate('company').populate('user');
+    // if (!role.includes("root")) throw new Error("User is not access");
+    const user = await UserModel.findById(_id)
+    const filter = {};
+    if (!role.includes("root")) filter.company = user?.company
+    const deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
+    const create = await BillModel.find({$and: [filter, {type: {$in: ['createViettel', 'createVinaphone', 'createMobifone', 'createOthers']}}]},null, options).populate('company').populate('user');
+    const sub = await BillModel.find({$and: [filter, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]},null, options).populate('company').populate('user');
+    const price = await BillModel.find({$and: [filter, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]},null, options).populate('company').populate('user');
+    
+    // const surplus = totalDeposit - totalBill
+    const analys = await CDRModel.aggregate([
+      {
+          $match: {
+              $and: [{disposition: "ANSWERED"}, filter]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+          }
+      },
+      {
+          $group: {
+              _id: "$company",  // Nhóm theo trường 'company'
+              totalBill: {
+                  $sum: {
+                      $toDouble: "$bill"  // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+                  }
+              }
+          }
+      }
+  ])
+  let newDeposit = []
+  for (const item of analys) {
+    let totalBill = 0
+    let totalDeposit = 0
+    create.map((el) => {
+      if(el.company._id.toString() == item._id.toString())
+        totalBill+= el.price
+    })
+    sub.map((el) => {
+      if(el.company._id.toString() == item._id.toString())
+        totalBill+= el.price
+    })
+    // console.log('totalBill: ', totalBill)
+    deposit.map((el) => {
+      if(el.company._id.toString() == item._id.toString())
+        totalDeposit+= el.price
+    })
+
+    const findDeposit = deposit.find(el => el.company._id.toString() == item._id.toString())
+    Object.assign(findDeposit, {totalBill: item.totalBill + totalBill, surplus: totalDeposit - (item.totalBill + totalBill) })
+    newDeposit.push(findDeposit)
+    // console.log('item._id: ', item._id)
+    // console.log('comany._id: ', deposit[0].company._id)
+    // console.log('findDeposit: ', findDeposit)
+  }
+
+  // console.log('analys: ', analys)
+  // console.log('deposit: ', deposit)
+  // console.log('newDeposit: ', newDeposit)
     res
       .status(200)
-      .json({ success: true, message: "Get list successful", data: {deposit, create, sub, price} });
+      .json({ success: true, message: "Get list successful", data: {deposit: newDeposit, create, sub, price } });
   } catch (error) {
     console.log({ error });
     res.status(400).json({

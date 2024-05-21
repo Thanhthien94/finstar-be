@@ -43,7 +43,7 @@ const CDRSchema = new Schema(
   }
 );
 
-CDRSchema.index({ name: 1 });
+CDRSchema.index({ name: 1, disposition: 1, bill: 1, company: 1 });
 CDRSchema.plugin(mongoosePaginate);
 
 // interface UserModel<T extends Document> extends PaginateModel<T> {};
