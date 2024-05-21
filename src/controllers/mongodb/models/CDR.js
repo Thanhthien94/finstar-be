@@ -21,6 +21,7 @@ const CDRSchema = new Schema(
     name: { type: String },
     dstName: { type: String },
     dstID: { type: Schema.Types.ObjectId, ref: CUSTOMER_MODEL },
+    src: { type: String },
     cnum: { type: String },
     cnam: { type: String },
     dst: { type: String },

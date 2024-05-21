@@ -17,7 +17,7 @@ export const getParamsCDR = (req) => {
   if (req.query.cnum) {
     filter +=
       filter.split("WHERE").length <= 1
-        ? ` WHERE cnum IN (${req.query.cnum})`
+        ? ` WHERE (cnum IN (${req.query.cnum}) OR src IN (${req.query.cnum}))`
         : ` AND cnum IN (${req.query.cnum})`;
   }
   if (req.query.lastapp) {

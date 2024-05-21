@@ -243,7 +243,7 @@ const updateCDR = async () => {
     // const fromDate = new Date(new Date().getTime() - 4 * 24 * 60 * 60 * 1000);
     // req.query.fromDate = fromDate;
     const lastapp = "Dial";
-    const filter  = ` WHERE cnum IN (${listCnum}) AND lastapp IN ('${lastapp}') AND calldate >= ${JSON.stringify(getTime)}`
+    const filter  = ` WHERE (cnum IN (${listCnum}) OR src IN (${listCnum})) AND lastapp IN ('${lastapp}') AND calldate >= ${JSON.stringify(getTime)}`
     console.log({ filter });
 
     const [results] = await Bluebird.all([
@@ -263,13 +263,13 @@ const updateCDR = async () => {
       let bill = ""
       const customer = await CustomerModel.findOne({ phone: dst });
       const user = SIPs.find(
-        (sip) => sip.extension === result.cnum
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).user?._id;
       const usersTag = SIPs.find(
-        (sip) => sip.extension === result.cnum
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).usersTag?.map(item => item._id);
       const name = SIPs.find(
-        (sip) => sip.extension === result.cnum
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).user?.name;
       if(viettel.includes(checkNumber)) {
         telco = 'viettel'
@@ -299,6 +299,7 @@ const updateCDR = async () => {
           customer?.supervisorTag.toString() === user.toString())
           ? customer?._id
           : null;
+      const src = result.src
       const cnum = result.cnum;
       const cnam = result.cnam;
       const duration = result.duration;
@@ -329,6 +330,7 @@ const updateCDR = async () => {
         dstName,
         dstID,
         cnum,
+        src,
         cnam,
         dst,
         telco,
@@ -455,6 +457,7 @@ const migrateCDR = async (req, res) => {
   const telco = await TelcoModel.find().lean().exec();
     const {viettel, vinaphone, mobifone, others} = telco[0]
   const SIPs = await SipModel.find().populate("user").populate("usersTag")
+  console.log("SIPs: ", SIPs)
     const listCnum = SIPs.map(item => item.extension)
     if (!listCnum && !users.toString()) throw new Error("List not exist");
   if (!req.query.cnum) {
@@ -471,10 +474,11 @@ const migrateCDR = async (req, res) => {
 
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
-        `SELECT calldate, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
+        `SELECT calldate, src, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
     console.log({ results });
+    console.log('length: ', results.length)
     // let resultMapUser = [];
     let lastData = [];
     // if (results)
@@ -486,13 +490,13 @@ const migrateCDR = async (req, res) => {
       let bill = ""
       const customer = await CustomerModel.findOne({ phone: dst });
       const user = SIPs.find(
-        (sip) => sip.extension === result.cnum
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).user?._id;
       const usersTag = SIPs.find(
-        (sip) => sip.extension === result.cnum
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).usersTag?.map(item => item._id);
       const name = SIPs.find(
-        (sip) => sip.extension === result.cnum
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).user?.name;
       if(viettel.includes(checkNumber)) {
         telco = 'viettel'
@@ -530,6 +534,7 @@ const migrateCDR = async (req, res) => {
           customer?.supervisorTag.toString() === user.toString())
           ? customer?._id
           : null;
+      const src = result.src
       const cnum = result.cnum;
       const cnam = result.cnam;
       const duration = result.duration;
@@ -559,6 +564,7 @@ const migrateCDR = async (req, res) => {
         name,
         dstName,
         dstID,
+        src,
         cnum,
         cnam,
         dst,
