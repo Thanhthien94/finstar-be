@@ -265,6 +265,9 @@ const updateCDR = async () => {
       const user = SIPs.find(
         (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).user?._id;
+      const company = SIPs.find(
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
+      ).user?.company;
       const usersTag = SIPs.find(
         (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).usersTag?.map(item => item._id);
@@ -326,6 +329,7 @@ const updateCDR = async () => {
       const data = {
         user,
         usersTag,
+        company,
         name,
         dstName,
         dstID,
@@ -492,6 +496,9 @@ const migrateCDR = async (req, res) => {
       const user = SIPs.find(
         (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).user?._id;
+      const company = SIPs.find(
+        (sip) => sip.extension === result.cnum || sip.extension === result.src
+      ).user?.company;
       const usersTag = SIPs.find(
         (sip) => sip.extension === result.cnum || sip.extension === result.src
       ).usersTag?.map(item => item._id);
@@ -561,6 +568,7 @@ const migrateCDR = async (req, res) => {
       const data = {
         user,
         usersTag,
+        company,
         name,
         dstName,
         dstID,
