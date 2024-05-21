@@ -280,28 +280,28 @@ const updateCDR = async () => {
 
         if(viettel.includes(checkNumber)) {
           telco = 'viettel'
-          billID = priceViettel._id
+          billID = priceViettel?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceViettel?.price || 0) / 60) * 6
                   : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
         }
         if(vinaphone.includes(checkNumber)) {
           telco = 'vinaphone'
-          billID = priceVinaphone._id
+          billID = priceVinaphone?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceVinaphone?.price || 0) / 60) * 6
                   : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
         }
         if(mobifone.includes(checkNumber)) {
           telco = 'mobifone'
-          billID = priceMobifone._id
+          billID = priceMobifone?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceMobifone?.price || 0) / 60) * 6
                   : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
         }
         if(others.includes(checkNumber)) {
           telco = 'others'
-          billID = priceOthers._id
+          billID = priceOthers?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceOthers?.price || 0) / 60) * 6
                   : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
@@ -518,28 +518,28 @@ const migrateCDR = async (req, res) => {
 
         if(viettel.includes(checkNumber)) {
           telco = 'viettel'
-          billID = priceViettel._id
+          billID = priceViettel?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceViettel?.price || 0) / 60) * 6
                   : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
         }
         if(vinaphone.includes(checkNumber)) {
           telco = 'vinaphone'
-          billID = priceVinaphone._id
+          billID = priceVinaphone?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceVinaphone?.price || 0) / 60) * 6
                   : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
         }
         if(mobifone.includes(checkNumber)) {
           telco = 'mobifone'
-          billID = priceMobifone._id
+          billID = priceMobifone?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceMobifone?.price || 0) / 60) * 6
                   : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
         }
         if(others.includes(checkNumber)) {
           telco = 'others'
-          billID = priceOthers._id
+          billID = priceOthers?._id
           bill = Number(billsec) <= 6
                   ? (Number(priceOthers?.price || 0) / 60) * 6
                   : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
