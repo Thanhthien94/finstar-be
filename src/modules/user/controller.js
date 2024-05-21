@@ -204,6 +204,7 @@ const updateUser = async (req, res) => {
       await SipModel.findByIdAndUpdate(sipAccount, {
         user: findUser._id,
         usersTag: findUser.usersTag,
+        company: findUser.company,
       });
     }
     if (status === "Locked") {
