@@ -268,7 +268,7 @@ const deleteUser = async (req, res) => {
 const createCompany = async (req, res) => {
   const { role } = req.decode;
   try {
-    if (role !== "root") throw new Error("User is not access");
+    if (!role.includes("root")) throw new Error("User is not access");
     const { name } = req.body;
     if (!name) throw new Error("Chưa nhập tên công ty");
     const findCompany = await CompanyModel.findOne({ name });
