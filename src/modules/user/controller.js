@@ -195,16 +195,24 @@ const updateUser = async (req, res) => {
       role,
       type,
       title,
+      usersTag,
       sipAccount,
     } = data;
     const findUser = await UserModel.findOne({ username });
     if (findUser.role === "root") throw new Error("Can not change user root");
     // console.log(findUser);
+    if (!sipAccount) {
+      await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
+        user: null,
+        usersTag: null,
+        company: null,
+      });
+    }
     if (sipAccount) {
       await SipModel.findByIdAndUpdate(sipAccount, {
         user: findUser._id,
-        usersTag: findUser.usersTag,
-        company: findUser.company,
+        usersTag: usersTag || findUser.usersTag,
+        company: company || findUser.company,
       });
     }
     if (status === "Locked") {
@@ -228,6 +236,7 @@ const updateUser = async (req, res) => {
           type,
           title,
           sipAccount,
+          usersTag
         }
       );
     }

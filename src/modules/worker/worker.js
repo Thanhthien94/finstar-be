@@ -257,105 +257,104 @@ const updateCDR = async () => {
     // if (results)
     // (results) &&
     for (const result of results) {
-      const dst = result.dst;
+      const dst = result.dst === 'tdial' ? result.did : result.dst;
       const checkNumber = result.dst.slice(0, 3)
       let telco = "";
       let bill = ""
       const customer = await CustomerModel.findOne({ phone: dst });
-      const user = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).user?._id;
-      const company = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).user?.company;
-      const usersTag = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).usersTag?.map(item => item._id);
-      const name = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).user?.name;
-      if(viettel.includes(checkNumber)) {
-        telco = 'viettel'
-        bill = Number(result.billsec) * Number(priceViettel)
-      }
-      if(vinaphone.includes(checkNumber)) {
-        telco = 'vinaphone'
-        bill = Number(result.billsec) * Number(priceVinaphone)
-      }
-      if(mobifone.includes(checkNumber)) {
-        telco = 'mobifone'
-        bill = Number(result.billsec) * Number(priceMobifone)
-      }
-      if(others.includes(checkNumber)) {
-        telco = 'others'
-        bill = Number(result.billsec) * Number(priceOthers)
-      }
-      const dstName = customer?.name;
-      const dstID =
-        (customer?.userTag &&
-          customer?.userTag.toString() === user.toString()) ||
-        (customer?.salesTag &&
-          customer?.salesTag.toString() === user.toString()) ||
-        (customer?.teamleadTag &&
-          customer?.teamleadTag.toString() === user.toString()) ||
-        (customer?.supervisorTag &&
-          customer?.supervisorTag.toString() === user.toString())
-          ? customer?._id
-          : null;
-      const src = result.src
-      const cnum = result.cnum;
-      const cnam = result.cnam;
-      const duration = result.duration;
-      const billsec =
-        result.disposition === "NO ANSWER" && result.billsec > 0
-          ? 0
-          : result.disposition === "ANSWERED" && result.billsec === 0
-          ? 1
-          : result.billsec;
-      const disposition = result.disposition;
-      const lastapp = result.lastapp;
-      const linkRecord =
-        result.recordingfile && result.lastapp === "Dial"
-          ? `https://${DOMAIN}/admin/recordings/${String(
-              result.recordingfile.split("-")[3]
-            ).slice(0, 4)}/${String(result.recordingfile.split("-")[3]).slice(
-              4,
-              6
-            )}/${String(result.recordingfile.split("-")[3]).slice(6, 8)}/${
-              result.recordingfile
-            }`
-          : "";
-      const createdAt = result.calldate;
-      const data = {
-        user,
-        usersTag,
-        company,
-        name,
-        dstName,
-        dstID,
-        cnum,
-        src,
-        cnam,
-        dst,
-        telco,
-        duration,
-        billsec,
-        bill,
-        disposition,
-        lastapp,
-        linkRecord,
-        createdAt,
-      };
-      const check = await CDRModel.findOne(data);
+      const findUser = SIPs.find(
+        (sip) => (sip.extension === result.cnum || sip.extension === result.src) && sip.company
+      )
+      if(findUser) {
+        const user = findUser.user._id
+        const company = findUser.user.company
+        const usersTag = findUser.usersTag?.map(item => item._id);
+        const name = findUser.user.name
 
-      // console.log({check})
-
-      // if (!check.length) {
-
-      if (!check) {
-        // await CDRModel.create(data);
-
-        lastData.push(data);
+        if(viettel.includes(checkNumber)) {
+          telco = 'viettel'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceViettel?.price || 0) / 60) * 6
+                  : (Number(priceViettel?.price || 0) / 60) * Number(result.billsec);
+        }
+        if(vinaphone.includes(checkNumber)) {
+          telco = 'vinaphone'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceVinaphone?.price || 0) / 60) * 6
+                  : (Number(priceVinaphone?.price || 0) / 60) * Number(result.billsec);
+        }
+        if(mobifone.includes(checkNumber)) {
+          telco = 'mobifone'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceMobifone?.price || 0) / 60) * 6
+                  : (Number(priceMobifone?.price || 0) / 60) * Number(result.billsec);
+        }
+        if(others.includes(checkNumber)) {
+          telco = 'others'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceOthers?.price || 0) / 60) * 6
+                  : (Number(priceOthers?.price || 0) / 60) * Number(result.billsec);
+        }
+        const dstName = customer?.name;
+        const dstID =
+          (customer?.userTag &&
+            customer?.userTag.toString() === user.toString()) ||
+          (customer?.salesTag &&
+            customer?.salesTag.toString() === user.toString()) ||
+          (customer?.teamleadTag &&
+            customer?.teamleadTag.toString() === user.toString()) ||
+          (customer?.supervisorTag &&
+            customer?.supervisorTag.toString() === user.toString())
+            ? customer?._id
+            : null;
+        const src = result.src
+        const cnum = result.cnum;
+        const cnam = result.cnam;
+        const duration = result.duration;
+        const billsec =
+          result.disposition === "NO ANSWER" && result.billsec > 0
+            ? 0
+            : result.disposition === "ANSWERED" && result.billsec === 0
+            ? 1
+            : result.billsec;
+        const disposition = result.disposition;
+        const lastapp = result.lastapp;
+        const linkRecord =
+          result.recordingfile && result.lastapp === "Dial"
+            ? `https://${DOMAIN}/admin/recordings/${String(
+                result.recordingfile.split("-")[3]
+              ).slice(0, 4)}/${String(result.recordingfile.split("-")[3]).slice(
+                4,
+                6
+              )}/${String(result.recordingfile.split("-")[3]).slice(6, 8)}/${
+                result.recordingfile
+              }`
+            : "";
+        const createdAt = result.calldate;
+        const data = {
+          user,
+          usersTag,
+          company,
+          name,
+          dstName,
+          dstID,
+          src,
+          cnum,
+          cnam,
+          dst,
+          telco,
+          duration,
+          billsec,
+          bill,
+          disposition,
+          lastapp,
+          linkRecord,
+          createdAt,
+        };
+        const check = await CDRModel.findOne(data);
+        if (!check) {
+          lastData.push(data);
+        }
       }
     }
 
@@ -377,7 +376,7 @@ const fetchCDRToDownload = async (req, res) => {
 
     const [result] = await Bluebird.all([
       mysqlInstance.execQuery(
-        `SELECT calldate, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter} ORDER BY cdr.calldate DESC LIMIT ${limit} OFFSET ${offset}`
+        `SELECT calldate, cnum, dst, did, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter} ORDER BY cdr.calldate DESC LIMIT ${limit} OFFSET ${offset}`
       ),
     ]);
 
@@ -488,114 +487,106 @@ const migrateCDR = async (req, res) => {
     // if (results)
     // (results) &&
     for (const result of results) {
-      const dst = result.dst;
+      const dst = result.dst === 'tdial' ? result.did : result.dst;
       const checkNumber = result.dst.slice(0, 3)
       let telco = "";
       let bill = ""
       const customer = await CustomerModel.findOne({ phone: dst });
-      const user = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).user?._id;
-      const company = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).user?.company;
-      const usersTag = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).usersTag?.map(item => item._id);
-      const name = SIPs.find(
-        (sip) => sip.extension === result.cnum || sip.extension === result.src
-      ).user?.name;
-      if(viettel.includes(checkNumber)) {
-        telco = 'viettel'
-        bill = Number(result.billsec) <= 6
-                ? (Number(priceViettel?.price || 0) / 60) * 6
-                : (Number(priceViettel?.price || 0) / 60) * Number(result.billsec);
-      }
-      if(vinaphone.includes(checkNumber)) {
-        telco = 'vinaphone'
-        bill = Number(result.billsec) <= 6
-                ? (Number(priceVinaphone?.price || 0) / 60) * 6
-                : (Number(priceVinaphone?.price || 0) / 60) * Number(result.billsec);
-      }
-      if(mobifone.includes(checkNumber)) {
-        telco = 'mobifone'
-        bill = Number(result.billsec) <= 6
-                ? (Number(priceMobifone?.price || 0) / 60) * 6
-                : (Number(priceMobifone?.price || 0) / 60) * Number(result.billsec);
-      }
-      if(others.includes(checkNumber)) {
-        telco = 'others'
-        bill = Number(result.billsec) <= 6
-                ? (Number(priceOthers?.price || 0) / 60) * 6
-                : (Number(priceOthers?.price || 0) / 60) * Number(result.billsec);
-      }
-      const dstName = customer?.name;
-      const dstID =
-        (customer?.userTag &&
-          customer?.userTag.toString() === user.toString()) ||
-        (customer?.salesTag &&
-          customer?.salesTag.toString() === user.toString()) ||
-        (customer?.teamleadTag &&
-          customer?.teamleadTag.toString() === user.toString()) ||
-        (customer?.supervisorTag &&
-          customer?.supervisorTag.toString() === user.toString())
-          ? customer?._id
-          : null;
-      const src = result.src
-      const cnum = result.cnum;
-      const cnam = result.cnam;
-      const duration = result.duration;
-      const billsec =
-        result.disposition === "NO ANSWER" && result.billsec > 0
-          ? 0
-          : result.disposition === "ANSWERED" && result.billsec === 0
-          ? 1
-          : result.billsec;
-      const disposition = result.disposition;
-      const lastapp = result.lastapp;
-      const linkRecord =
-        result.recordingfile && result.lastapp === "Dial"
-          ? `https://${DOMAIN}/admin/recordings/${String(
-              result.recordingfile.split("-")[3]
-            ).slice(0, 4)}/${String(result.recordingfile.split("-")[3]).slice(
-              4,
-              6
-            )}/${String(result.recordingfile.split("-")[3]).slice(6, 8)}/${
-              result.recordingfile
-            }`
-          : "";
-      const createdAt = result.calldate;
-      const data = {
-        user,
-        usersTag,
-        company,
-        name,
-        dstName,
-        dstID,
-        src,
-        cnum,
-        cnam,
-        dst,
-        telco,
-        duration,
-        billsec,
-        bill,
-        disposition,
-        lastapp,
-        linkRecord,
-        createdAt,
-      };
-      const check = await CDRModel.findOne(data);
+      const findUser = SIPs.find(
+        (sip) => (sip.extension === result.cnum || sip.extension === result.src) && sip.company
+      )
+      if(findUser) {
+        const user = findUser.user._id
+        const company = findUser.user.company
+        const usersTag = findUser.usersTag?.map(item => item._id);
+        const name = findUser.user.name
 
-      // console.log({check})
-
-      // if (!check.length) {
-
-      if (!check) {
-        // await CDRModel.create(data);
-
-        lastData.push(data);
+        if(viettel.includes(checkNumber)) {
+          telco = 'viettel'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceViettel?.price || 0) / 60) * 6
+                  : (Number(priceViettel?.price || 0) / 60) * Number(result.billsec);
+        }
+        if(vinaphone.includes(checkNumber)) {
+          telco = 'vinaphone'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceVinaphone?.price || 0) / 60) * 6
+                  : (Number(priceVinaphone?.price || 0) / 60) * Number(result.billsec);
+        }
+        if(mobifone.includes(checkNumber)) {
+          telco = 'mobifone'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceMobifone?.price || 0) / 60) * 6
+                  : (Number(priceMobifone?.price || 0) / 60) * Number(result.billsec);
+        }
+        if(others.includes(checkNumber)) {
+          telco = 'others'
+          bill = Number(result.billsec) <= 6
+                  ? (Number(priceOthers?.price || 0) / 60) * 6
+                  : (Number(priceOthers?.price || 0) / 60) * Number(result.billsec);
+        }
+        const dstName = customer?.name;
+        const dstID =
+          (customer?.userTag &&
+            customer?.userTag.toString() === user.toString()) ||
+          (customer?.salesTag &&
+            customer?.salesTag.toString() === user.toString()) ||
+          (customer?.teamleadTag &&
+            customer?.teamleadTag.toString() === user.toString()) ||
+          (customer?.supervisorTag &&
+            customer?.supervisorTag.toString() === user.toString())
+            ? customer?._id
+            : null;
+        const src = result.src
+        const cnum = result.cnum;
+        const cnam = result.cnam;
+        const duration = result.duration;
+        const billsec =
+          result.disposition === "NO ANSWER" && result.billsec > 0
+            ? 0
+            : result.disposition === "ANSWERED" && result.billsec === 0
+            ? 1
+            : result.billsec;
+        const disposition = result.disposition;
+        const lastapp = result.lastapp;
+        const linkRecord =
+          result.recordingfile && result.lastapp === "Dial"
+            ? `https://${DOMAIN}/admin/recordings/${String(
+                result.recordingfile.split("-")[3]
+              ).slice(0, 4)}/${String(result.recordingfile.split("-")[3]).slice(
+                4,
+                6
+              )}/${String(result.recordingfile.split("-")[3]).slice(6, 8)}/${
+                result.recordingfile
+              }`
+            : "";
+        const createdAt = result.calldate;
+        const data = {
+          user,
+          usersTag,
+          company,
+          name,
+          dstName,
+          dstID,
+          src,
+          cnum,
+          cnam,
+          dst,
+          telco,
+          duration,
+          billsec,
+          bill,
+          disposition,
+          lastapp,
+          linkRecord,
+          createdAt,
+        };
+        const check = await CDRModel.findOne(data);
+        if (!check) {
+          lastData.push(data);
+        }
       }
+
     }
 
     console.log({ lastData });
