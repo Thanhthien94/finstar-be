@@ -258,7 +258,7 @@ const updateCDR = async () => {
     // (results) &&
     for (const result of results) {
       const dst = result.dst === 'tdial' ? result.did : result.dst;
-      const checkNumber = result.dst.slice(0, 3)
+      const checkNumber = dst.slice(0, 3)
       let telco = "";
       let bill = ""
       let billID = ""
@@ -464,10 +464,11 @@ const migrateCDR = async (req, res) => {
     const priceVinaphone = await BillModel.findOne({type: 'priceVinaphone'},null, options)
     const priceMobifone = await BillModel.findOne({ type: 'priceMobifone'},null, options)
     const priceOthers = await BillModel.findOne({type: 'priceOthers'},null, options)
+    console.log({priceViettel, priceVinaphone, priceMobifone, priceOthers})
   const telco = await TelcoModel.find().lean().exec();
     const {viettel, vinaphone, mobifone, others} = telco[0]
   const SIPs = await SipModel.find().populate("user").populate("usersTag")
-  console.log("SIPs: ", SIPs)
+  // console.log("SIPs: ", SIPs)
     const listCnum = SIPs.map(item => item.extension)
     if (!listCnum && !users.toString()) throw new Error("List not exist");
   if (!req.query.cnum) {
@@ -487,7 +488,7 @@ const migrateCDR = async (req, res) => {
         `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
-    console.log({ results });
+    // console.log({ results });
     console.log('length: ', results.length)
     // let resultMapUser = [];
     let lastData = [];
@@ -495,10 +496,10 @@ const migrateCDR = async (req, res) => {
     // (results) &&
     for (const result of results) {
       const dst = result.dst === 'tdial' ? result.did : result.dst;
-      const checkNumber = result.dst.slice(0, 3)
+      const checkNumber = dst.slice(0, 3)
       let telco = "";
       let bill = ""
-      let billID = ""
+      let billID = null
       const customer = await CustomerModel.findOne({ phone: dst });
       const findUser = SIPs.find(
         (sip) => (sip.extension === result.cnum || sip.extension === result.src) && sip.company
