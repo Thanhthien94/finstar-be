@@ -33,7 +33,7 @@ const upadateFetchCustomers = async (data) => {
 const fetchCDRMongo = async (req, res) => {
   try {
     // fecth CDR start
-    const {filters, options} = getParamsCDRMongo
+    const {filters, options} = getParamsCDRMongo(req)
     const total = await CDRModel.count(filters);
     const result = await CDRModel.find(
       filters,
@@ -45,9 +45,9 @@ const fetchCDRMongo = async (req, res) => {
       message: "get list cdr successful",
       data: {
         total,
-        count: result.length,
-        page: options.skip + 1,
-        limit: options.limit,
+        count: result?.length,
+        page: options?.skip + 1,
+        limit: options?.limit,
         data: result,
       },
     });
