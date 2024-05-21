@@ -248,7 +248,7 @@ const updateCDR = async () => {
 
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
-        `SELECT calldate, src, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
+        `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
     console.log({ results });
@@ -261,6 +261,7 @@ const updateCDR = async () => {
       const checkNumber = result.dst.slice(0, 3)
       let telco = "";
       let bill = ""
+      let billID = ""
       const customer = await CustomerModel.findOne({ phone: dst });
       const findUser = SIPs.find(
         (sip) => (sip.extension === result.cnum || sip.extension === result.src) && sip.company
@@ -270,30 +271,40 @@ const updateCDR = async () => {
         const company = findUser.user.company
         const usersTag = findUser.usersTag?.map(item => item._id);
         const name = findUser.user.name
+        const billsec =
+          result.disposition === "NO ANSWER" && result.billsec > 0
+            ? 0
+            : result.disposition === "ANSWERED" && result.billsec === 0
+            ? 1
+            : result.billsec;
 
         if(viettel.includes(checkNumber)) {
           telco = 'viettel'
-          bill = Number(result.billsec) <= 6
+          billID = priceViettel._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceViettel?.price || 0) / 60) * 6
-                  : (Number(priceViettel?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
         }
         if(vinaphone.includes(checkNumber)) {
           telco = 'vinaphone'
-          bill = Number(result.billsec) <= 6
+          billID = priceVinaphone._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceVinaphone?.price || 0) / 60) * 6
-                  : (Number(priceVinaphone?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
         }
         if(mobifone.includes(checkNumber)) {
           telco = 'mobifone'
-          bill = Number(result.billsec) <= 6
+          billID = priceMobifone._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceMobifone?.price || 0) / 60) * 6
-                  : (Number(priceMobifone?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
         }
         if(others.includes(checkNumber)) {
           telco = 'others'
-          bill = Number(result.billsec) <= 6
+          billID = priceOthers._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceOthers?.price || 0) / 60) * 6
-                  : (Number(priceOthers?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
         }
         const dstName = customer?.name;
         const dstID =
@@ -311,12 +322,7 @@ const updateCDR = async () => {
         const cnum = result.cnum;
         const cnam = result.cnam;
         const duration = result.duration;
-        const billsec =
-          result.disposition === "NO ANSWER" && result.billsec > 0
-            ? 0
-            : result.disposition === "ANSWERED" && result.billsec === 0
-            ? 1
-            : result.billsec;
+        
         const disposition = result.disposition;
         const lastapp = result.lastapp;
         const linkRecord =
@@ -346,6 +352,7 @@ const updateCDR = async () => {
           duration,
           billsec,
           bill,
+          billID,
           disposition,
           lastapp,
           linkRecord,
@@ -477,7 +484,7 @@ const migrateCDR = async (req, res) => {
 
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
-        `SELECT calldate, src, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
+        `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
     console.log({ results });
@@ -491,6 +498,7 @@ const migrateCDR = async (req, res) => {
       const checkNumber = result.dst.slice(0, 3)
       let telco = "";
       let bill = ""
+      let billID = ""
       const customer = await CustomerModel.findOne({ phone: dst });
       const findUser = SIPs.find(
         (sip) => (sip.extension === result.cnum || sip.extension === result.src) && sip.company
@@ -500,30 +508,40 @@ const migrateCDR = async (req, res) => {
         const company = findUser.user.company
         const usersTag = findUser.usersTag?.map(item => item._id);
         const name = findUser.user.name
+        const billsec =
+          result.disposition === "NO ANSWER" && result.billsec > 0
+            ? 0
+            : result.disposition === "ANSWERED" && result.billsec === 0
+            ? 1
+            : result.billsec;
 
         if(viettel.includes(checkNumber)) {
           telco = 'viettel'
-          bill = Number(result.billsec) <= 6
+          billID = priceViettel._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceViettel?.price || 0) / 60) * 6
-                  : (Number(priceViettel?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
         }
         if(vinaphone.includes(checkNumber)) {
           telco = 'vinaphone'
-          bill = Number(result.billsec) <= 6
+          billID = priceVinaphone._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceVinaphone?.price || 0) / 60) * 6
-                  : (Number(priceVinaphone?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
         }
         if(mobifone.includes(checkNumber)) {
           telco = 'mobifone'
-          bill = Number(result.billsec) <= 6
+          billID = priceMobifone._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceMobifone?.price || 0) / 60) * 6
-                  : (Number(priceMobifone?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
         }
         if(others.includes(checkNumber)) {
           telco = 'others'
-          bill = Number(result.billsec) <= 6
+          billID = priceOthers._id
+          bill = Number(billsec) <= 6
                   ? (Number(priceOthers?.price || 0) / 60) * 6
-                  : (Number(priceOthers?.price || 0) / 60) * Number(result.billsec);
+                  : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
         }
         const dstName = customer?.name;
         const dstID =
@@ -541,12 +559,7 @@ const migrateCDR = async (req, res) => {
         const cnum = result.cnum;
         const cnam = result.cnam;
         const duration = result.duration;
-        const billsec =
-          result.disposition === "NO ANSWER" && result.billsec > 0
-            ? 0
-            : result.disposition === "ANSWERED" && result.billsec === 0
-            ? 1
-            : result.billsec;
+        
         const disposition = result.disposition;
         const lastapp = result.lastapp;
         const linkRecord =
@@ -576,6 +589,7 @@ const migrateCDR = async (req, res) => {
           duration,
           billsec,
           bill,
+          billID,
           disposition,
           lastapp,
           linkRecord,
@@ -588,7 +602,6 @@ const migrateCDR = async (req, res) => {
       }
 
     }
-
     console.log({ lastData });
     await CDRModel.insertMany(lastData);
     res.status(200).json({

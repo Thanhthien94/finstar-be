@@ -32,54 +32,11 @@ const upadateFetchCustomers = async (data) => {
 
 const fetchCDRMongo = async (req, res) => {
   try {
-    const rolePermit = req.decode.role;
-    const id = req.decode.id;
-    const user = await UserModel.findById(id);
-    const { filters, options } = getParams(req);
-    let filterPlus = {};
-    // const { role } = req.query
-
-    if (rolePermit === "admin") {
-      filterPlus = {
-        company: user.company,
-      };
-    }
-    if (rolePermit === "head") {
-      filterPlus = {
-        headTag: id,
-      };
-    }
-    if (rolePermit === "ASM") {
-      filterPlus = {
-        ASMTag: id,
-      };
-    }
-    if (rolePermit === "supervisor") {
-      filterPlus = {
-        supervisorTag: id,
-      };
-    }
-    if (rolePermit === "teamlead") {
-      filterPlus = {
-        teamleadTag: id,
-      };
-    }
-    if (rolePermit === "sales") {
-      filterPlus = {
-        user: id,
-      };
-    }
-
-    // fetch users
-    const users = await UserModel.find({...filters, ...filterPlus});
-    const listID = users.map((item) => item._id);
-    // console.log({listID})
-
     // fecth CDR start
-    const filtersCDR = getParamsCDRMongo(req).filters
-    const total = await CDRModel.count({ user: { $in: listID }, ...filtersCDR });
+    const {filters, options} = getParamsCDRMongo
+    const total = await CDRModel.count(filters);
     const result = await CDRModel.find(
-      { user: { $in: listID }, ...filtersCDR },
+      filters,
       null,
       options
     ).populate("user", ["name"]);

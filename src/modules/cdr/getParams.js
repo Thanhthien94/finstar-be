@@ -92,6 +92,7 @@ export const getParamsCDRMongo = (req) => {
     req.query._id ||
     req.query.user ||
     req.query.name ||
+    req.query.company ||
     req.query.disposition ||
     req.query.dst ||
     req.query.fromDate ||
@@ -103,6 +104,7 @@ export const getParamsCDRMongo = (req) => {
       req.query.user ? { user: req.query.user } : {},
       req.query._id ? { user: req.query._id } : {},
       req.query.name ? { name: req.query.name } : {},
+      req.query.company ? { company: req.query.company } : {},
       req.query.disposition ? { disposition: req.query.disposition } : {},
       req.query.dst ? { dst: req.query.dst } : {},
       req.query.fromDate

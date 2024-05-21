@@ -4,7 +4,8 @@ import {
   CUSTOMER_MODEL,
   USER_MODEL,
   CDR_MODEL,
-  COMPANY_MODEL
+  COMPANY_MODEL,
+  BILL_MODEL,
 } from "../constant.js";
 
 const Schema = mongoose.Schema;
@@ -31,6 +32,7 @@ const CDRSchema = new Schema(
     duration: { type: String },
     billsec: { type: String },
     bill: { type: String },
+    billID: { type: Schema.Types.ObjectId, ref: BILL_MODEL },
     disposition: { type: String },
     lastapp: { type: String },
     linkRecord: { type: String },
