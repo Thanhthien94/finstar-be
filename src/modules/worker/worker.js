@@ -302,7 +302,7 @@ const updateCDR = async () => {
         if(others.includes(checkNumber)) {
           telco = 'others'
           billID = priceOthers?._id
-          bill = Number(billsec) <= 6
+          bill = Number(billsec) > 0 && Number(billsec) <= 6
                   ? (Number(priceOthers?.price || 0) / 60) * 6
                   : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
         }
@@ -509,6 +509,7 @@ const migrateCDR = async (req, res) => {
         const company = findUser.user.company
         const usersTag = findUser.usersTag?.map(item => item._id);
         const name = findUser.user.name
+        const disposition = result.disposition;
         const billsec =
           result.disposition === "NO ANSWER" && result.billsec > 0
             ? 0
@@ -519,7 +520,7 @@ const migrateCDR = async (req, res) => {
         if(viettel.includes(checkNumber)) {
           telco = 'viettel'
           billID = priceViettel?._id
-          bill = Number(billsec) <= 6
+          bill = Number(billsec) > 0 && Number(billsec) <= 6
                   ? (Number(priceViettel?.price || 0) / 60) * 6
                   : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
         }
@@ -561,7 +562,6 @@ const migrateCDR = async (req, res) => {
         const cnam = result.cnam;
         const duration = result.duration;
         
-        const disposition = result.disposition;
         const lastapp = result.lastapp;
         const linkRecord =
           result.recordingfile && result.lastapp === "Dial"
