@@ -644,22 +644,22 @@ const createNewBillInfo = async (req, res) => {
 
 const getBillInfo = async (req, res) => {
   const { role, _id } = req.decode;
-  const {options} = getParams(req)
+  const {filters,options} = getParams(req)
   try {
     // if (!role.includes("root")) throw new Error("User is not access");
     const user = await UserModel.findById(_id)
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company
-    let deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
-    const create = await BillModel.find({$and: [filter, {type: {$in: ['createViettel', 'createVinaphone', 'createMobifone', 'createOthers']}}]},null, options).populate('company').populate('user');
-    const sub = await BillModel.find({$and: [filter, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]},null, options).populate('company').populate('user');
-    const price = await BillModel.find({$and: [filter, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]},null, options).populate('company').populate('user');
+    let deposit = await BillModel.find({$and: [filter, filters, {type: 'deposit'}]},null, options).populate('company').populate('user');
+    const create = await BillModel.find({$and: [filter, filters, {type: {$in: ['createViettel', 'createVinaphone', 'createMobifone', 'createOthers']}}]},null, options).populate('company').populate('user');
+    const sub = await BillModel.find({$and: [filter, filters, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]},null, options).populate('company').populate('user');
+    const price = await BillModel.find({$and: [filter, filters, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]},null, options).populate('company').populate('user');
     
     // const surplus = totalDeposit - totalBill
-    const analys = await CDRModel.aggregate([
+    const analysBillCDRByCompany = await CDRModel.aggregate([
       {
           $match: {
-              $and: [{disposition: "ANSWERED"}, filter]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+              $and: [{disposition: "ANSWERED"}, filter, filters]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
           }
       },
       {
@@ -671,10 +671,56 @@ const getBillInfo = async (req, res) => {
                   }
               }
           }
+      },
+      {
+        $group: {
+          _id: null,  // Không nhóm theo trường nào cả
+          total: {
+            $sum: "$totalBill"  // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+          },
+          companies: {
+            $push: {
+              _id: "$_id", 
+              totalBill: "$totalBill"
+            }
+          }
+        }
       }
   ])
+  console.log('analysBillCDRByCompany: ', analysBillCDRByCompany)
+  const analysBillByType = await BillModel.aggregate([
+    {
+        $match: {
+            $and: [{type: {$nin: ["deposit", "priceViettel", "priceVinaphone", "priceMobifone", "priceOthers"]}}, filter, filters]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+        }
+    },
+    {
+        $group: {
+            _id: "$type",  // Nhóm theo trường 'company'
+            bill: {
+                $sum : {
+                  $toDouble: "$price"
+                }
+            }
+        }
+    },
+    {
+      $group: {
+        _id: null,  // Không nhóm theo trường nào cả
+        totalBill: {
+          $sum: "$bill"  // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+        },
+        types: {
+          $push: {
+            type: "$_id", 
+            bill: "$bill"
+          }
+        }
+      }
+    }
+])
   let newDeposit = []
-  for (const item of analys) {
+  for (const item of analysBillCDRByCompany[0].companies) {
     let totalBill = 0
     let totalDeposit = 0
     create.map((el) => {
@@ -692,13 +738,15 @@ const getBillInfo = async (req, res) => {
     })
 
     const findDeposit = deposit.find(el => el.company._id.toString() == item._id.toString())
-    Object.assign(findDeposit, {totalBill: item.totalBill + totalBill, surplus: totalDeposit - (item.totalBill + totalBill) })
-    newDeposit.push(findDeposit)
+    if(findDeposit) {
+      Object.assign(findDeposit, {totalBill: item.totalBill + totalBill - (totalDeposit - findDeposit.price) < 0 ? 0 : item.totalBill + totalBill - (totalDeposit - findDeposit.price), surplus: totalDeposit - (item.totalBill + totalBill) })
+      newDeposit.push(findDeposit)
+      await BillModel.findByIdAndUpdate(findDeposit._id, {$set: {totalBill: findDeposit.totalBill, surplus: findDeposit.surplus}}, { runValidators: false })
+    }
 
     // console.log('item._id: ', item._id)
     // console.log('comany._id: ', deposit[0].company._id)
-    await BillModel.findByIdAndUpdate(findDeposit._id, {$set: {totalBill: findDeposit.totalBill, surplus: findDeposit.surplus}}, { runValidators: false })
-    console.log('findDeposit: ', findDeposit)
+    // console.log('findDeposit: ', findDeposit)
   }
   deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
 
@@ -707,7 +755,7 @@ const getBillInfo = async (req, res) => {
   // console.log('newDeposit: ', newDeposit)
     res
       .status(200)
-      .json({ success: true, message: "Get list successful", data: {deposit, create, sub, price } });
+      .json({ success: true, message: "Get list successful", data: {deposit, create, sub, price, analysBillByType, analysBillCDRByCompany } });
   } catch (error) {
     console.log({ error });
     res.status(400).json({

@@ -33,6 +33,7 @@ export const getParams = (req) => {
     req.query.statusCode ||
     req.query.bank ||
     req.query.name ||
+    req.query.company ||
     req.query.status ||
     req.query.autocallStatus ||
     req.query.role ||
@@ -54,6 +55,7 @@ export const getParams = (req) => {
     filters.$and = [
       req.query.user ? { user: req.query.user } : {},
       req.query._id ? { _id: req.query._id } : {},
+      req.query.company ? { company: req.query.company } : {},
       req.query.project ? { project: req.query.project } : {},
       req.query.campaign ? { campaign: req.query.campaign } : {},
       req.query.bank ? { 'linkCard.bank': req.query.bank } : {},
