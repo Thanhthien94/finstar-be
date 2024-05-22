@@ -83,7 +83,7 @@ const fetchCDRMongo = async (req, res) => {
       },
       {
           $group: {
-              _id: "$disposition",  // Nhóm theo trường 'company'
+              _id: "$disposition",  // 
               call: {
                   $sum : 1
               }

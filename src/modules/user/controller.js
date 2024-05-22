@@ -646,7 +646,6 @@ const getBillInfo = async (req, res) => {
   const { role, _id } = req.decode;
   const {filters,options} = getParams(req)
   try {
-    // if (!role.includes("root")) throw new Error("User is not access");
     const user = await UserModel.findById(_id)
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company
@@ -655,7 +654,6 @@ const getBillInfo = async (req, res) => {
     const sub = await BillModel.find({$and: [filter, filters, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]},null, options).populate('company').populate('user');
     const price = await BillModel.find({$and: [filter, filters, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]},null, options).populate('company').populate('user');
     
-    // const surplus = totalDeposit - totalBill
     const analysBillCDRByCompany = await CDRModel.aggregate([
       {
           $match: {

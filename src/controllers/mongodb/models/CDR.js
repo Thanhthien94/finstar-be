@@ -31,7 +31,7 @@ const CDRSchema = new Schema(
     telco: { type: String },
     duration: { type: String },
     billsec: { type: String },
-    bill: { type: String },
+    bill: { type: Number, default: 0 },
     billID: { type: Schema.Types.ObjectId, ref: BILL_MODEL },
     disposition: { type: String },
     lastapp: { type: String },
