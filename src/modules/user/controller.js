@@ -650,7 +650,7 @@ const getBillInfo = async (req, res) => {
     const user = await UserModel.findById(_id)
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company
-    const deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
+    let deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
     const create = await BillModel.find({$and: [filter, {type: {$in: ['createViettel', 'createVinaphone', 'createMobifone', 'createOthers']}}]},null, options).populate('company').populate('user');
     const sub = await BillModel.find({$and: [filter, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]},null, options).populate('company').populate('user');
     const price = await BillModel.find({$and: [filter, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]},null, options).populate('company').populate('user');
@@ -700,13 +700,14 @@ const getBillInfo = async (req, res) => {
     await BillModel.findByIdAndUpdate(findDeposit._id, {$set: {totalBill: findDeposit.totalBill, surplus: findDeposit.surplus}}, { runValidators: false })
     console.log('findDeposit: ', findDeposit)
   }
+  deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
 
   // console.log('analys: ', analys)
   // console.log('deposit: ', deposit)
   // console.log('newDeposit: ', newDeposit)
     res
       .status(200)
-      .json({ success: true, message: "Get list successful", data: {deposit: newDeposit, create, sub, price } });
+      .json({ success: true, message: "Get list successful", data: {deposit, create, sub, price } });
   } catch (error) {
     console.log({ error });
     res.status(400).json({
