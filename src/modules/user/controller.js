@@ -397,13 +397,11 @@ const createRole = async (req, res) => {
 };
 
 const getRoles = async (req, res) => {
-  const { role, id } = req.decode;
+  const { role, _id } = req.decode;
   try {
-    // if (role !== "root" && role !== "admin")
-    //   throw new Error("User is not access");
     let filter = {};
-    const user = await UserModel.findById(id);
-    // if (role === "admin") filter = { _id: user.role };
+    const user = await UserModel.findById(_id);
+    if (!role.includes("root")) filter = {company: user.company};
     const data = await RoleModel.find(filter);
     // console.log('data: ', data)
     res
@@ -439,13 +437,11 @@ const createNewSIP = async (req, res) => {
 };
 
 const getSIPs = async (req, res) => {
-  const { role, id } = req.decode;
+  const { role, _id } = req.decode;
   try {
-    // if (role !== "root" && role !== "admin")
-    //   throw new Error("User is not access");
     let filter = {};
-    const user = await UserModel.findById(id);
-    if (role === "admin") filter = {};
+    const user = await UserModel.findById(_id);
+    if (!role.includes("root")) filter = {company: user.company};
     const data = await SipModel.find(filter);
     res
       .status(200)
@@ -519,13 +515,11 @@ const createNewPBX = async (req, res) => {
 };
 
 const getPBXs = async (req, res) => {
-  const { role, id } = req.decode;
+  const { role, _id } = req.decode;
   try {
-    // if (role !== "root" && role !== "admin")
-    //   throw new Error("User is not access");
     let filter = {};
-    const user = await UserModel.findById(id);
-    if (role === "admin") filter = {};
+    const user = await UserModel.findById(_id);
+    if (!role.includes("root")) filter = {company: user.company};
     const data = await PbxModel.find(filter);
     res
       .status(200)
@@ -746,7 +740,7 @@ const getBillInfo = async (req, res) => {
     // console.log('comany._id: ', deposit[0].company._id)
     // console.log('findDeposit: ', findDeposit)
   }
-  deposit = await BillModel.find({$and: [filter, {type: 'deposit'}]},null, options).populate('company').populate('user');
+  deposit = await BillModel.find({$and: [filter, filters, {type: 'deposit'}]},null, options).populate('company').populate('user');
 
   // console.log('analys: ', analys)
   // console.log('deposit: ', deposit)
