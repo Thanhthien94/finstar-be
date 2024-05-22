@@ -694,9 +694,11 @@ const getBillInfo = async (req, res) => {
     const findDeposit = deposit.find(el => el.company._id.toString() == item._id.toString())
     Object.assign(findDeposit, {totalBill: item.totalBill + totalBill, surplus: totalDeposit - (item.totalBill + totalBill) })
     newDeposit.push(findDeposit)
+
     // console.log('item._id: ', item._id)
     // console.log('comany._id: ', deposit[0].company._id)
-    // console.log('findDeposit: ', findDeposit)
+    await BillModel.findByIdAndUpdate(findDeposit._id, {$set: {totalBill: findDeposit.totalBill, surplus: findDeposit.surplus}}, { runValidators: false })
+    console.log('findDeposit: ', findDeposit)
   }
 
   // console.log('analys: ', analys)

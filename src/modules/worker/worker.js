@@ -224,26 +224,27 @@ const updateCDR = async () => {
     // }
     const options = {};
     options.sort = { createdAt: -1 };
-    const priceViettel = await BillModel.find(
+    const priceViettel = await BillModel.findOne(
       { type: "priceViettel" },
       null,
       options
     );
-    const priceVinaphone = await BillModel.find(
+    const priceVinaphone = await BillModel.findOne(
       { type: "priceVinaphone" },
       null,
       options
     );
-    const priceMobifone = await BillModel.find(
+    const priceMobifone = await BillModel.findOne(
       { type: "priceMobifone" },
       null,
       options
     );
-    const priceOthers = await BillModel.find(
+    const priceOthers = await BillModel.findOne(
       { type: "priceOthers" },
       null,
       options
     );
+    console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
     const telco = await TelcoModel.find().lean().exec();
     const { viettel, vinaphone, mobifone, others } = telco[0];
     const SIPs = await SipModel.find().populate("user").populate("usersTag");
