@@ -108,40 +108,13 @@ const resetPassword = async (req, res) => {
 
 const getListUsers = async (req, res) => {
   try {
-    const rolePermit = req.decode.role;
-    const id = req.decode.id;
-    const user = await UserModel.findById(id);
+    const {role, _id} = req.decode
+    let filter = {};
+    const user = await UserModel.findById(_id);
+    if (!role.includes("root")) filter = {company: user.company};
     const { filters, options } = getParams(req);
     let filterPlus = {};
-    // const { role } = req.query
-    // if (rolePermit === "sales") throw new Error("User not permission");
-    // if (rolePermit === "root") filterPlus = filters;
-    // if (rolePermit === "admin") {
-    //   filterPlus = {
-    //     $and: [filters, { company: user.company }],
-    //   };
-    // }
-    // if (rolePermit === "head") {
-    //   filterPlus = {
-    //     $and: [filters, { headTag: id }],
-    //   };
-    // }
-    // if (rolePermit === "ASM") {
-    //   filterPlus = {
-    //     $and: [filters, { ASMTag: id }],
-    //   };
-    // }
-    // if (rolePermit === "supervisor") {
-    //   filterPlus = {
-    //     $and: [filters, { supervisorTag: id }],
-    //   };
-    // }
-    // if (rolePermit === "teamlead") {
-    //   filterPlus = {
-    //     $and: [filters, { teamleadTag: id }],
-    //   };
-    // }
-    const users = await UserModel.find(filterPlus, null, options)
+    const users = await UserModel.find({$and: [filters, filter]}, null, options)
       .populate("company")
       .populate("usersTag")
       .populate("role")
@@ -152,7 +125,7 @@ const getListUsers = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Get list is successful",
-      data: { role: rolePermit, total, count, users },
+      data: { total, count, users },
     });
   } catch (error) {
     console.log({ error });
