@@ -174,7 +174,7 @@ const updateUser = async (req, res) => {
       sipAccount,
     } = data;
     const findUser = await UserModel.findOne({ username });
-    if (findUser.role === "root") throw new Error("Can not change user root");
+    if (!findUser?.role.includes("root")) throw new Error("Can not change user root");
     // console.log(findUser);
     if (!sipAccount) {
       await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
@@ -199,7 +199,6 @@ const updateUser = async (req, res) => {
       await UserModel.findOneAndUpdate(
         { username },
         {
-          username,
           firstname,
           lastname,
           phone,
