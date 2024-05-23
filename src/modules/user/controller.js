@@ -39,6 +39,7 @@ const createUser = async (req, res) => {
       .json({ success: false, message: "Missing username or password" });
   }
   try {
+    if (!role.includes("root")) throw new Error("User is not access");
     const user = await UserModel.findOne({ username });
     if (user) {
       throw new Error("User already exists");
@@ -399,6 +400,7 @@ const createRole = async (req, res) => {
 const getRoles = async (req, res) => {
   const { role, _id } = req.decode;
   try {
+  if (!role.includes("root")) throw new Error("User is not access");
     let filter = {};
     const user = await UserModel.findById(_id);
     if (!role.includes("root")) filter = {company: user.company};

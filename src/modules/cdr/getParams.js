@@ -135,7 +135,7 @@ export const getParamsCDRMongo = (req) => {
     ];
   }
 
-  const keyword = req.query.keywordCDR;
+  const keyword = req.query.keyword;
   if (keyword) {
     filters.$or = [
       { name: { $regex: keyword, $options: "i" } },
