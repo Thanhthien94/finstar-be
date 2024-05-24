@@ -83,6 +83,7 @@ app.post("/auth/login", async (req, res) => {
             role: user.role,
             firstname: user.firstname,
             lastname: user.lastname,
+            sip: user.sipAccount
           };
           res.status(200).json({
             success: true,

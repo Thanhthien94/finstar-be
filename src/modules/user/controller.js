@@ -413,10 +413,11 @@ const createNewSIP = async (req, res) => {
 const getSIPs = async (req, res) => {
   const { role, _id } = req.decode;
   try {
+    const {filters, options} = getParams(req)
     let filter = {};
     const user = await UserModel.findById(_id);
     if (!role.includes("root")) filter = {company: user.company};
-    const data = await SipModel.find(filter);
+    const data = await SipModel.find({$and: [filter, filters]}, null, options).populate('pbx');
     res
       .status(200)
       .json({ success: true, message: "Get list successful", data });
