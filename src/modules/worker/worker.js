@@ -484,22 +484,27 @@ const removeRule = (req, res) => {
       }
 
       // Tách các chuỗi thành từng dòng
-      // const lines = stdout.split("\n");
+      const lines = stdout.split("\n");
       const commands = [];
 
-      // // Duyệt qua các dòng để tìm các quy tắc chứa IP cần gỡ bỏ
-      // lines.forEach((line) => {
-      //   if (line.includes(ip)) {
-      //     // Tách chuỗi để lấy số dòng và tên chuỗi
-      //     const parts = line.trim().split(/\s+/);
-      //     const lineNumber = parts[0];
-      //     const chainName = parts[1];
+      // Duyệt qua các dòng để tìm các quy tắc chứa IP cần gỡ bỏ
+      lines.forEach((line) => {
+        if (line.includes(ip)) {
+          // Tách chuỗi để lấy số dòng và tên chuỗi
+          const parts = line.trim().split(/\s+/);
+          const lineNumber = parts[0];
+          const chainName = parts[1];
 
-      //     // Tạo lệnh để xóa quy tắc
-      //     const deleteRuleCmd = `iptables -D ${chainName} ${lineNumber}`;
-      //     commands.push(deleteRuleCmd);
-      //   }
-      // });
+          // Tạo lệnh để xóa quy tắc
+          const deleteRuleCmd = `iptables -D ${chainName} ${lineNumber}`;
+          commands.push(deleteRuleCmd);
+        }
+      });
+
+      // Kiểm tra nếu không có lệnh nào được tạo
+      if (commands.length === 0) {
+        return res.status(404).send(`No iptables rules found for IP ${ip}`);
+      }
 
       // Thực hiện các lệnh xóa quy tắc
       exec(commands.join(" && "), (err, stdout, stderr) => {
