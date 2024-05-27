@@ -493,7 +493,7 @@ const removeRule = (req, res) => {
           // Tách chuỗi để lấy số dòng và tên chuỗi
           const parts = line.trim().split(/\s+/);
           const lineNumber = parts[0];
-          const chainName = parts[1];
+          const chainName = parts[3];
 
           // Tạo lệnh để xóa quy tắc
           const deleteRuleCmd = `iptables -D ${chainName} ${lineNumber}`;
