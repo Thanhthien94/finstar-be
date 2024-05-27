@@ -429,7 +429,7 @@ const migrateCDR = async (req, res) => {
 
 const getRuleIptables = (req, res) => {
   try {
-    const command = `iptables -L -v -n`;
+    const command = `iptables -L -v -n --line-numbers`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
@@ -448,6 +448,7 @@ const getRuleIptables = (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
 const addBlackList = (req, res) => {
   try {
     const { ip } = req.body;
@@ -473,9 +474,62 @@ const addBlackList = (req, res) => {
   }
 };
 
+const removeRule = (req, res) => {
+  try {
+    const { ip } = req.body;
+    if (!ip) throw new Error('IP is required')
+    // Lệnh để liệt kê tất cả các quy tắc trong iptables
+  const listRulesCmd = 'iptables -L -v -n --line-numbers';
+
+  exec(listRulesCmd, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Error listing iptables rules: ${stderr}`);
+      return res.status(500).send('Failed to list iptables rules');
+    }
+
+    // Tách các chuỗi thành từng dòng
+    const lines = stdout.split('\n');
+    const commands = [];
+
+    // Duyệt qua các dòng để tìm các quy tắc chứa IP cần gỡ bỏ
+    lines.forEach(line => {
+      if (line.includes(ip)) {
+        // Tách chuỗi để lấy số dòng và tên chuỗi
+        const parts = line.trim().split(/\s+/);
+        const lineNumber = parts[0];
+        const chainName = parts[1];
+
+        // Tạo lệnh để xóa quy tắc
+        const deleteRuleCmd = `iptables -D ${chainName} ${lineNumber}`;
+        commands.push(deleteRuleCmd);
+      }
+    });
+
+    // Thực hiện các lệnh xóa quy tắc
+    exec(commands.join(' && '), (err, stdout, stderr) => {
+      if (err) {
+        console.error(`Error deleting iptables rules: ${stderr}`);
+        return res.status(500).send('Failed to delete iptables rules');
+      }
+      res
+        .status(200)
+        .json({
+          success: true,
+          message: `IP ${ip} removed from all iptables rules`,
+          data: {},
+        });
+    });
+  });
+  } catch (error) {
+    console.log(error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export default {
   fetchCDRToDownload,
   migrateCDR,
   getRuleIptables,
   addBlackList,
+  removeRule,
 };
