@@ -429,7 +429,7 @@ const migrateCDR = async (req, res) => {
 
 const getRuleIptables = (req, res) => {
   try {
-    const command = `sudo iptables -L -v -n`;
+    const command = `iptables -L -v -n`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
