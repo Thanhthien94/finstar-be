@@ -448,9 +448,34 @@ const getRuleIptables = (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+const addBlackList = (req, res) => {
+  try {
+    const { ip } = req.body;
+    if (!ip) throw new Error('IP is required')
+
+    const command = `iptables -A INPUT -s ${ip} -j DROP`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return res.status(500).send(`Error: ${stderr}`);
+      }
+      res
+        .status(200)
+        .json({
+          success: true,
+          message: `IP ${ip} has been blacklisted`,
+          data: {},
+        });
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
 
 export default {
   fetchCDRToDownload,
   migrateCDR,
   getRuleIptables,
+  addBlackList,
 };
