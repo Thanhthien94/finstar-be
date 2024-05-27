@@ -506,17 +506,25 @@ const removeRule = (req, res) => {
         return res.status(404).send(`No iptables rules found for IP ${ip}`);
       }
 
-      // Thực hiện các lệnh xóa quy tắc
-      exec(commands.join(" && "), (err, stdout, stderr) => {
-        if (err) {
-          console.error(`Error deleting iptables rules: ${stderr}`);
-          return res.status(500).send("Failed to delete iptables rules");
+      // Thực hiện các lệnh xóa quy tắc tuần tự
+      function executeCommandsSequentially(cmds, index, callback) {
+        if (index >= cmds.length) {
+          callback();
+          return;
         }
-        res.status(200).json({
-          success: true,
-          message: `IP ${ip} removed from all iptables rules`,
-          data: {},
+
+        exec(cmds[index], (err) => {
+          if (err) {
+            return res
+              .status(500)
+              .send(`Failed to execute command: ${cmds[index]}`);
+          }
+          executeCommandsSequentially(cmds, index + 1, callback);
         });
+      }
+
+      executeCommandsSequentially(commands, 0, () => {
+        res.send(`IP ${ip} removed from all iptables rules`);
       });
     });
   } catch (error) {
