@@ -453,7 +453,7 @@ const addBlackList = (req, res) => {
     const { ip } = req.body;
     if (!ip) throw new Error('IP is required')
 
-    const command = `iptables -A INPUT -s ${ip} -j DROP`;
+    const command = `iptables -A BLACKLIST -s ${ip} -j DROP`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
