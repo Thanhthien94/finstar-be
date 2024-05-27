@@ -429,7 +429,7 @@ const migrateCDR = async (req, res) => {
 
 const getRuleIptables = (req, res) => {
   try {
-    const command = `iptables -L -v -n --line-numbers | grep 'DROP' | awk '{print $8}'`;
+    const command = `iptables -L -v -n --line-numbers | grep 'DROP'`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
