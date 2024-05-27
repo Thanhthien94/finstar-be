@@ -8,6 +8,7 @@ const PbxSchema = new Schema(
   {
     name: { type: String, require: true },
     host: {type: String, require: true},
+    WsHost: {type: String},
     SipPort: {type: Number, require: true, default: 5060},
     WsPort: {type: Number, require: true, default: 8088},
     db: { type: Schema.Types.Mixed, default: {
