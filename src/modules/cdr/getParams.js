@@ -92,37 +92,37 @@ export const getParamsCDRMongo = (req) => {
     req.query._id ||
     req.query.user ||
     req.query.name ||
+    req.query.cnum ||
     req.query.company ||
     req.query.telco ||
     req.query.disposition ||
     req.query.dst ||
-    req.query.fromDate ||
-    req.query.toDate ||
-    req.query.gteStartTime ||
-    req.query.lteStartTime
+    req.query.gteDate ||
+    req.query.lteDate
   ) {
     filters.$and = [
       req.query.user ? { user: req.query.user } : {},
       req.query._id ? { user: req.query._id } : {},
       req.query.name ? { name: req.query.name } : {},
+      req.query.cnum ? { cnum: req.query.cnum } : {},
       req.query.company ? { company: req.query.company } : {},
       req.query.telco ? { telco: req.query.telco } : {},
       req.query.disposition ? { disposition: req.query.disposition } : {},
       req.query.dst ? { dst: req.query.dst } : {},
-      req.query.fromDate
+      req.query.gteDate
         ? {
             createdAt: {
               $gte: new Date(
-                new Date(req.query.fromDate).getTime()
+                new Date(req.query.gteDate).getTime()
               ),
             },
           }
         : {},
-      req.query.toDate
+      req.query.lteDate
         ? {
             createdAt: {
               $lte: new Date(
-                new Date(req.query.toDate).getTime()
+                new Date(req.query.lteDate).getTime()
               ),
             },
           }

@@ -8,7 +8,6 @@ const {verifyToken} = auth
 // Route.post('/register', call.register)
 Route.get('/', verifyToken, cdr.fetchCDRMongo)
 Route.get('/migrateCDR', verifyToken, cdr.migrateCDR)
-Route.get('/count', verifyToken, cdr.countCDR)
 Route.get('/download', verifyToken, cdr.fetchCDRToDownload)
 Route.get('/talktime', verifyToken, cdr.fetchTalkTime)
 Route.get('/aggregate/ampm', verifyToken, cdr.aggregateCDRAmPm)

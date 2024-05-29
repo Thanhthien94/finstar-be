@@ -31,13 +31,13 @@ const apiPath = "/api/crm/customer/download/pdf";
 // console.log("date: ", new Date());
 
 let fetchCustomers = [];
-setTimeout(async () => {
-  fetchCustomers = await CustomerModel.find().lean().exec();
-}, 1 * 10 * 1000);
-setInterval(async () => {
-  fetchCustomers = await CustomerModel.find().lean().exec();
-  cdr.upadateFetchCustomers(fetchCustomers);
-}, (5 * 60 + Math.floor(Math.random() * 10)) * 1000);
+// setTimeout(async () => {
+//   fetchCustomers = await CustomerModel.find().lean().exec();
+// }, 1 * 10 * 1000);
+// setInterval(async () => {
+//   fetchCustomers = await CustomerModel.find().lean().exec();
+//   cdr.upadateFetchCustomers(fetchCustomers);
+// }, (5 * 60 + Math.floor(Math.random() * 10)) * 1000);
 
 // const upadateFetchCustomers = async () => {
 //   setTimeout(async () => {

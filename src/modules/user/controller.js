@@ -108,13 +108,17 @@ const resetPassword = async (req, res) => {
 
 const getListUsers = async (req, res) => {
   try {
-    const {role, _id} = req.decode
+    const { role, _id } = req.decode;
     let filter = {};
     const user = await UserModel.findById(_id);
-    if (!role.includes("root")) filter = {company: user.company};
+    if (!role.includes("root")) filter = { company: user.company };
     const { filters, options } = getParams(req);
     let filterPlus = {};
-    const users = await UserModel.find({$and: [filters, filter]}, null, options)
+    const users = await UserModel.find(
+      { $and: [filters, filter] },
+      null,
+      options
+    )
       .populate("company")
       .populate("usersTag")
       .populate("role")
@@ -174,7 +178,8 @@ const updateUser = async (req, res) => {
       sipAccount,
     } = data;
     const findUser = await UserModel.findOne({ username });
-    if (!findUser?.role.includes("root")) throw new Error("Can not change user root");
+    if (!findUser?.role.includes("root"))
+      throw new Error("Can not change user root");
     // console.log(findUser);
     if (!sipAccount) {
       await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
@@ -210,7 +215,7 @@ const updateUser = async (req, res) => {
           type,
           title,
           sipAccount,
-          usersTag
+          usersTag,
         }
       );
     }
@@ -372,10 +377,10 @@ const createRole = async (req, res) => {
 const getRoles = async (req, res) => {
   const { role, _id } = req.decode;
   try {
-  if (!role.includes("root")) throw new Error("User is not access");
+    if (!role.includes("root")) throw new Error("User is not access");
     let filter = {};
     const user = await UserModel.findById(_id);
-    if (!role.includes("root")) filter = {company: user.company};
+    if (!role.includes("root")) filter = { company: user.company };
     const data = await RoleModel.find(filter);
     // console.log('data: ', data)
     res
@@ -413,11 +418,15 @@ const createNewSIP = async (req, res) => {
 const getSIPs = async (req, res) => {
   const { role, _id } = req.decode;
   try {
-    const {filters, options} = getParams(req)
+    const { filters, options } = getParams(req);
     let filter = {};
     const user = await UserModel.findById(_id);
-    if (!role.includes("root")) filter = {company: user.company};
-    const data = await SipModel.find({$and: [filter, filters]}, null, options).populate('pbx');
+    if (!role.includes("root")) filter = { company: user.company };
+    const data = await SipModel.find(
+      { $and: [filter, filters] },
+      null,
+      options
+    ).populate("pbx");
     res
       .status(200)
       .json({ success: true, message: "Get list successful", data });
@@ -494,7 +503,7 @@ const getPBXs = async (req, res) => {
   try {
     let filter = {};
     const user = await UserModel.findById(_id);
-    if (!role.includes("root")) filter = {company: user.company};
+    if (!role.includes("root")) filter = { company: user.company };
     const data = await PbxModel.find(filter);
     res
       .status(200)
@@ -582,16 +591,10 @@ const createNewBillInfo = async (req, res) => {
   console.log("role: ", role);
   try {
     if (!role.includes("root")) throw new Error("User is not access");
-    const {
-      name,
-      type,
-      price,
-      company,
-      user,
-    } = req.body;
-    console.log('body: ', req.body)
+    const { name, type, price, company, user } = req.body;
+    console.log("body: ", req.body);
     if (!name) throw new Error("Vui lòng nhập tên hoặc mô tả");
-    
+
     const PBX = await BillModel.create({
       name,
       type,
@@ -613,116 +616,230 @@ const createNewBillInfo = async (req, res) => {
 
 const getBillInfo = async (req, res) => {
   const { role, _id } = req.decode;
-  const {filters,options} = getParams(req)
+  const { filters, options } = getParams(req);
   try {
-    const user = await UserModel.findById(_id)
+    const user = await UserModel.findById(_id);
     const filter = {};
-    if (!role.includes("root")) filter.company = user?.company
-    let deposit = await BillModel.find({$and: [filter, filters, {type: 'deposit'}]},null, options).populate('company').populate('user');
-    const create = await BillModel.find({$and: [filter, filters, {type: {$in: ['createViettel', 'createVinaphone', 'createMobifone', 'createOthers']}}]},null, options).populate('company').populate('user');
-    const sub = await BillModel.find({$and: [filter, filters, {type: {$in: ['subViettel', 'subVinaphone', 'subMobifone', 'subOthers']}}]},null, options).populate('company').populate('user');
-    const price = await BillModel.find({$and: [filter, filters, {type: {$in: ['priceViettel', 'priceVinaphone', 'priceMobifone', 'priceOthers']}}]},null, options).populate('company').populate('user');
-    
+    if (!role.includes("root")) filter.company = user?.company;
+    if (res.query.company) filter.company = res.query.company;
+
+    let deposit = await BillModel.find(
+      { $and: [filter, filters, { type: "deposit" }] },
+      null,
+      options
+    )
+      .populate("company")
+      .populate("user");
+    const create = await BillModel.find(
+      {
+        $and: [
+          filter,
+          filters,
+          {
+            type: {
+              $in: [
+                "createViettel",
+                "createVinaphone",
+                "createMobifone",
+                "createOthers",
+              ],
+            },
+          },
+        ],
+      },
+      null,
+      options
+    )
+      .populate("company")
+      .populate("user");
+    const sub = await BillModel.find(
+      {
+        $and: [
+          filter,
+          filters,
+          {
+            type: {
+              $in: ["subViettel", "subVinaphone", "subMobifone", "subOthers"],
+            },
+          },
+        ],
+      },
+      null,
+      options
+    )
+      .populate("company")
+      .populate("user");
+    const price = await BillModel.find(
+      {
+        $and: [
+          filter,
+          filters,
+          {
+            type: {
+              $in: [
+                "priceViettel",
+                "priceVinaphone",
+                "priceMobifone",
+                "priceOthers",
+              ],
+            },
+          },
+        ],
+      },
+      null,
+      options
+    )
+      .populate("company")
+      .populate("user");
+
     const analysBillCDRByCompany = await CDRModel.aggregate([
       {
-          $match: {
-              $and: [{disposition: "ANSWERED"}, filter, filters]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
-          }
-      },
-      {
-          $group: {
-              _id: "$company",  // Nhóm theo trường 'company'
-              totalBill: {
-                  $sum: {
-                      $toDouble: "$bill"  // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
-                  }
-              }
-          }
+        $match: {
+          $and: [{ disposition: "ANSWERED" }, filter, filters], // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+        },
       },
       {
         $group: {
-          _id: null,  // Không nhóm theo trường nào cả
+          _id: "$company", // Nhóm theo trường 'company'
+          totalBill: {
+            $sum: {
+              $toDouble: "$bill", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null, // Không nhóm theo trường nào cả
           total: {
-            $sum: "$totalBill"  // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+            $sum: "$totalBill", // Tính tổng của các tổng 'bill' theo nhóm 'telco'
           },
           companies: {
             $push: {
-              _id: "$_id", 
-              totalBill: "$totalBill"
-            }
-          }
-        }
-      }
-  ])
-  console.log('analysBillCDRByCompany: ', analysBillCDRByCompany)
-  const analysBillByType = await BillModel.aggregate([
-    {
-        $match: {
-            $and: [{type: {$nin: ["deposit", "priceViettel", "priceVinaphone", "priceMobifone", "priceOthers"]}}, filter, filters]  // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
-        }
-    },
-    {
-        $group: {
-            _id: "$type",  // Nhóm theo trường 'company'
-            bill: {
-                $sum : {
-                  $toDouble: "$price"
-                }
-            }
-        }
-    },
-    {
-      $group: {
-        _id: null,  // Không nhóm theo trường nào cả
-        totalBill: {
-          $sum: "$bill"  // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+              _id: "$_id",
+              totalBill: "$totalBill",
+            },
+          },
         },
-        types: {
-          $push: {
-            type: "$_id", 
-            bill: "$bill"
-          }
-        }
+      },
+    ]);
+    console.log("analysBillCDRByCompany: ", analysBillCDRByCompany);
+    const analysBillByType = await BillModel.aggregate([
+      {
+        $match: {
+          $and: [
+            {
+              type: {
+                $nin: [
+                  "deposit",
+                  "priceViettel",
+                  "priceVinaphone",
+                  "priceMobifone",
+                  "priceOthers",
+                ],
+              },
+            },
+            filter,
+            filters,
+          ], // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+        },
+      },
+      {
+        $group: {
+          _id: "$type", // Nhóm theo trường 'company'
+          bill: {
+            $sum: {
+              $toDouble: "$price",
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null, // Không nhóm theo trường nào cả
+          totalBill: {
+            $sum: "$bill", // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+          },
+          types: {
+            $push: {
+              type: "$_id",
+              bill: "$bill",
+            },
+          },
+        },
+      },
+    ]);
+    let newDeposit = [];
+    for (const item of analysBillCDRByCompany[0].companies) {
+      let totalBill = 0;
+      let totalDeposit = 0;
+      create.map((el) => {
+        if (el.company._id.toString() == item._id.toString())
+          totalBill += el.price;
+      });
+      sub.map((el) => {
+        if (el.company._id.toString() == item._id.toString())
+          totalBill += el.price;
+      });
+      // console.log('totalBill: ', totalBill)
+      deposit.map((el) => {
+        if (el.company._id.toString() == item._id.toString())
+          totalDeposit += el.price;
+      });
+
+      const findDeposit = deposit.find(
+        (el) => el.company._id.toString() == item._id.toString()
+      );
+      if (findDeposit) {
+        Object.assign(findDeposit, {
+          totalBill:
+            item.totalBill + totalBill - (totalDeposit - findDeposit.price) < 0
+              ? 0
+              : item.totalBill + totalBill - (totalDeposit - findDeposit.price),
+          surplus: totalDeposit - (item.totalBill + totalBill),
+        });
+        newDeposit.push(findDeposit);
+        await BillModel.findByIdAndUpdate(
+          findDeposit._id,
+          {
+            $set: {
+              totalBill: findDeposit.totalBill,
+              surplus: findDeposit.surplus,
+            },
+          },
+          { runValidators: false }
+        );
       }
+
+      // console.log('item._id: ', item._id)
+      // console.log('comany._id: ', deposit[0].company._id)
+      // console.log('findDeposit: ', findDeposit)
     }
-])
-  let newDeposit = []
-  for (const item of analysBillCDRByCompany[0].companies) {
-    let totalBill = 0
-    let totalDeposit = 0
-    create.map((el) => {
-      if(el.company._id.toString() == item._id.toString())
-        totalBill+= el.price
-    })
-    sub.map((el) => {
-      if(el.company._id.toString() == item._id.toString())
-        totalBill+= el.price
-    })
-    // console.log('totalBill: ', totalBill)
-    deposit.map((el) => {
-      if(el.company._id.toString() == item._id.toString())
-        totalDeposit+= el.price
-    })
+    deposit = await BillModel.find(
+      { $and: [filter, filters, { type: "deposit" }] },
+      null,
+      options
+    )
+      .populate("company")
+      .populate("user");
 
-    const findDeposit = deposit.find(el => el.company._id.toString() == item._id.toString())
-    if(findDeposit) {
-      Object.assign(findDeposit, {totalBill: item.totalBill + totalBill - (totalDeposit - findDeposit.price) < 0 ? 0 : item.totalBill + totalBill - (totalDeposit - findDeposit.price), surplus: totalDeposit - (item.totalBill + totalBill) })
-      newDeposit.push(findDeposit)
-      await BillModel.findByIdAndUpdate(findDeposit._id, {$set: {totalBill: findDeposit.totalBill, surplus: findDeposit.surplus}}, { runValidators: false })
-    }
-
-    // console.log('item._id: ', item._id)
-    // console.log('comany._id: ', deposit[0].company._id)
-    // console.log('findDeposit: ', findDeposit)
-  }
-  deposit = await BillModel.find({$and: [filter, filters, {type: 'deposit'}]},null, options).populate('company').populate('user');
-
-  // console.log('analys: ', analys)
-  // console.log('deposit: ', deposit)
-  // console.log('newDeposit: ', newDeposit)
+    // console.log('analys: ', analys)
+    // console.log('deposit: ', deposit)
+    // console.log('newDeposit: ', newDeposit)
     res
       .status(200)
-      .json({ success: true, message: "Get list successful", data: {deposit, create, sub, price, analysBillByType, analysBillCDRByCompany } });
+      .json({
+        success: true,
+        message: "Get list successful",
+        data: {
+          deposit,
+          create,
+          sub,
+          price,
+          analysBillByType,
+          analysBillCDRByCompany,
+        },
+      });
   } catch (error) {
     console.log({ error });
     res.status(400).json({
