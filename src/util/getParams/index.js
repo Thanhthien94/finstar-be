@@ -1,4 +1,4 @@
-// import get from 'lodash';
+import mongoose from "mongoose";
 
 export const getParams = (req) => {
   const filters = {};
@@ -54,8 +54,8 @@ export const getParams = (req) => {
   ) {
     filters.$and = [
       req.query.user ? { user: req.query.user } : {},
-      req.query._id ? { _id: {$in: req.query._id.split(",")} } : {},
-      req.query.company ? { company: req.query.company } : {},
+      req.query._id ? { _id: {$in: req.query._id.split(",").map(item => new mongoose.Types.ObjectId(item))} } : {},
+      req.query.company ? { company: new mongoose.Types.ObjectId(req.query.company) } : {},
       req.query.project ? { project: req.query.project } : {},
       req.query.campaign ? { campaign: req.query.campaign } : {},
       req.query.bank ? { "linkCard.bank": req.query.bank } : {},

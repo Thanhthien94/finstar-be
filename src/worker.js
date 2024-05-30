@@ -10,7 +10,6 @@ import compression from "compression";
 import stream from "./util/logger/Logger.js";
 import mongodb from "./controllers/mongodb/index.js";
 import crm from "./modules/crm/index.js";
-import cdr from "./modules/cdr/index.js";
 import worker from "./modules/worker/index.js";
 import { CORS } from "./util/config/index.js";
 

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 export const getParamsCDR = (req) => {
   let limit = Number(req.query.limit) || 20;
   let offset = 0;
@@ -102,10 +103,10 @@ export const getParamsCDRMongo = (req) => {
   ) {
     filters.$and = [
       req.query.user ? { user: req.query.user } : {},
-      req.query._id ? { user: req.query._id } : {},
+      req.query._id ? { _id: req.query._id } : {},
       req.query.name ? { name: req.query.name } : {},
       req.query.cnum ? { cnum: req.query.cnum } : {},
-      req.query.company ? { company: req.query.company } : {},
+      req.query.company ? { company: new mongoose.Types.ObjectId(req.query.company) } : {},
       req.query.telco ? { telco: req.query.telco } : {},
       req.query.disposition ? { disposition: req.query.disposition } : {},
       req.query.dst ? { dst: req.query.dst } : {},

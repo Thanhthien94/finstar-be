@@ -238,6 +238,22 @@ const updateUser = async (req, res) => {
       );
     } else if (findUser && usersTag.length) {
       updateUserTags(findUser._id, usersTag);
+      await UserModel.findOneAndUpdate(
+        { username },
+        {
+          firstname,
+          lastname,
+          phone,
+          company,
+          hometown,
+          identification,
+          status,
+          role,
+          type,
+          title,
+          sipAccount,
+        }
+      );
     } else {
       await UserModel.findOneAndUpdate(
         { username },
