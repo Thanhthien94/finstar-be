@@ -54,11 +54,11 @@ export const getParams = (req) => {
   ) {
     filters.$and = [
       req.query.user ? { user: req.query.user } : {},
-      req.query._id ? { _id: req.query._id } : {},
+      req.query._id ? { _id: {$in: req.query._id.split(",")} } : {},
       req.query.company ? { company: req.query.company } : {},
       req.query.project ? { project: req.query.project } : {},
       req.query.campaign ? { campaign: req.query.campaign } : {},
-      req.query.bank ? { 'linkCard.bank': req.query.bank } : {},
+      req.query.bank ? { "linkCard.bank": req.query.bank } : {},
       req.query.statusCode
         ? req.query.statusCode === "notNone"
           ? { statusCode: { $ne: "Không có trạng thái" } }
@@ -66,7 +66,9 @@ export const getParams = (req) => {
         : {},
       req.query.name ? { name: req.query.name } : {},
       req.query.status ? { status: req.query.status } : {},
-      req.query.autocallStatus ? { autocallStatus: req.query.autocallStatus } : {},
+      req.query.autocallStatus
+        ? { autocallStatus: req.query.autocallStatus }
+        : {},
       req.query.role ? { role: req.query.role } : {},
       req.query.typeCard ? { "linkCard.type": req.query.typeCard } : {},
       req.query.salesTag

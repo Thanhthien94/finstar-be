@@ -23,7 +23,7 @@ const storage = new CloudinaryStorage({
 
 const uploadLogo = multer({ storage });
 
-Router.post("/",  user.createUser);
+Router.post("/", verifyToken,  user.createUser);
 Router.post("/switch", verifyToken, user.impersonate);
 Router.put("/", verifyToken, user.changePassword);
 Router.put("/reset", verifyToken, user.resetPassword);

@@ -15,6 +15,7 @@ import argon2 from "argon2";
 import auth from "../../util/authentication/auth.js";
 import { exportExcel } from "../../util/excel/excel.js";
 import moment from "../../util/monent/moment.js";
+import { populate } from "dotenv";
 
 const { generateToken } = auth;
 const createUser = async (req, res) => {
@@ -39,7 +40,10 @@ const createUser = async (req, res) => {
       .json({ success: false, message: "Missing username or password" });
   }
   try {
-    if (!role.includes("root")) throw new Error("User is not access");
+    console.log("decode: ", req.decode);
+    const rolePermit = req.decode?.role;
+    console.log({ rolePermit });
+    if (!rolePermit.includes("root")) throw new Error("User is not access");
     const user = await UserModel.findOne({ username });
     if (user) {
       throw new Error("User already exists");
@@ -177,10 +181,42 @@ const updateUser = async (req, res) => {
       usersTag,
       sipAccount,
     } = data;
-    const findUser = await UserModel.findOne({ username });
-    if (!findUser?.role.includes("root"))
+    console.log("data: ", data);
+    const findUser = await UserModel.findOne({ username }).populate("role");
+    // console.log('finduser: ', findUser)
+    if (findUser?.role.find((role) => role.name === "root"))
       throw new Error("Can not change user root");
     // console.log(findUser);
+    const updateUserTags = async (userId, newTags) => {
+      await UserModel.findByIdAndUpdate(userId, {usersTag: newTags})
+      const user = await UserModel.findById(userId).populate("usersTag");
+      console.log("user1: ", user);
+
+      // Hàm đệ quy để lấy tất cả usersTag của user
+      const getAllTags = async (user) => {
+        const tags = new Set(user.usersTag.map((tag) => tag._id.toString()));
+        console.log("tags: ", tags);
+
+        for (const tag of user.usersTag) {
+          const nestedUser = await UserModel.findById(tag).populate("usersTag");
+          const nestedTags = await getAllTags(nestedUser);
+          nestedTags.forEach(tags.add, tags);
+          console.log({ nestedTags, nestedUser });
+        }
+
+        return tags;
+      };
+
+      const allTags = await getAllTags(user);
+      newTags.forEach(allTags.add, allTags);
+
+      const news = Array.from(allTags);
+      console.log("user2: ", user);
+      console.log("new: ", news);
+      await UserModel.findByIdAndUpdate(user._id, {usersTag: news});
+      // await user.save();
+    };
+
     if (!sipAccount) {
       await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
         user: null,
@@ -200,6 +236,8 @@ const updateUser = async (req, res) => {
         { username },
         { status, refreshToken: null }
       );
+    } else if (findUser && usersTag.length) {
+      updateUserTags(findUser._id, usersTag);
     } else {
       await UserModel.findOneAndUpdate(
         { username },
@@ -215,7 +253,7 @@ const updateUser = async (req, res) => {
           type,
           title,
           sipAccount,
-          usersTag,
+          usersTag: []
         }
       );
     }
@@ -266,12 +304,12 @@ const createCompany = async (req, res) => {
 };
 
 const getCompanies = async (req, res) => {
-  const { role, id } = req.decode;
+  const { role, _id } = req.decode;
   try {
     // if (role !== "root" && role !== "admin")
     //   throw new Error("User is not access");
     let filter = {};
-    const user = await UserModel.findById(id);
+    const user = await UserModel.findById(_id);
     if (!role.includes("root")) throw new Error("User is not access");
     const data = await CompanyModel.find(filter);
     res.status(200).json({ success: true, message: "Company created", data });
@@ -303,16 +341,17 @@ const updateCompanies = async (req, res) => {
 };
 
 const createAccessibility = async (req, res) => {
-  const { role, id } = req.decode;
+  const { _id } = req.decode;
   try {
     // if (role !== "root") throw new Error("User is not access");
-    const { name } = req.body;
+    const { name, descsiption } = req.body;
     if (!name) throw new Error("Vui lòng tên hành động");
     const findAccess = await AccessibilityModel.findOne({ name });
     if (findAccess) throw new Error("Thông tin đã tồn tại");
-    const user = UserModel.findById(id);
+    const user = UserModel.findById(_id);
     const accessibility = await AccessibilityModel.create({
       name,
+      descsiption,
       company: user.company,
     });
     res.status(200).json({
@@ -329,12 +368,12 @@ const createAccessibility = async (req, res) => {
 };
 
 const getAccessibility = async (req, res) => {
-  const { role, id } = req.decode;
+  const { role, _id } = req.decode;
   try {
     // if (role !== "root" && role !== "admin")
     //   throw new Error("User is not access");
     let filter = {};
-    const user = await UserModel.findById(id);
+    const user = await UserModel.findById(_id);
     if (role === "admin") filter = { _id: user.role };
     const data = await AccessibilityModel.find();
     res
@@ -376,12 +415,15 @@ const createRole = async (req, res) => {
 
 const getRoles = async (req, res) => {
   const { role, _id } = req.decode;
+  const { filters } = getParams(req);
   try {
     if (!role.includes("root")) throw new Error("User is not access");
     let filter = {};
     const user = await UserModel.findById(_id);
     if (!role.includes("root")) filter = { company: user.company };
-    const data = await RoleModel.find(filter);
+    const data = await RoleModel.find({ $and: [filter, filters] }).populate(
+      "permission"
+    );
     // console.log('data: ', data)
     res
       .status(200)
@@ -784,56 +826,53 @@ const getBillInfo = async (req, res) => {
     ]);
     let newDeposit = [];
     // if (analysBillCDRByCompany.length)
-      for (const item of analysBillCDRByCompany[0].companies) {
-        let totalBill = 0;
-        let totalDeposit = 0;
-        create.map((el) => {
-          if (el.company._id.toString() == item._id.toString())
-            totalBill += el.price;
-        });
-        sub.map((el) => {
-          if (el.company._id.toString() == item._id.toString())
-            totalBill += el.price;
-        });
-        // console.log('totalBill: ', totalBill)
-        deposit.map((el) => {
-          if (el.company._id.toString() == item._id.toString())
-            totalDeposit += el.price;
-        });
+    for (const item of analysBillCDRByCompany[0].companies) {
+      let totalBill = 0;
+      let totalDeposit = 0;
+      create.map((el) => {
+        if (el.company._id.toString() == item._id.toString())
+          totalBill += el.price;
+      });
+      sub.map((el) => {
+        if (el.company._id.toString() == item._id.toString())
+          totalBill += el.price;
+      });
+      // console.log('totalBill: ', totalBill)
+      deposit.map((el) => {
+        if (el.company._id.toString() == item._id.toString())
+          totalDeposit += el.price;
+      });
 
-        const findDeposit = deposit.find(
-          (el) => el.company._id.toString() == item._id.toString()
-        );
+      const findDeposit = deposit.find(
+        (el) => el.company._id.toString() == item._id.toString()
+      );
 
-        // gán prop trước khi update DB
-        if (findDeposit) {
-          Object.assign(findDeposit, {
-            totalBill:
-              item.totalBill + totalBill - (totalDeposit - findDeposit.price) <
-              0
-                ? 0
-                : item.totalBill +
-                  totalBill -
-                  (totalDeposit - findDeposit.price),
-            surplus: totalDeposit - (item.totalBill + totalBill),
-          });
-          newDeposit.push(findDeposit);
-          await BillModel.findByIdAndUpdate(
-            findDeposit._id,
-            {
-              $set: {
-                totalBill: findDeposit.totalBill,
-                surplus: findDeposit.surplus,
-              },
+      // gán prop trước khi update DB
+      if (findDeposit) {
+        Object.assign(findDeposit, {
+          totalBill:
+            item.totalBill + totalBill - (totalDeposit - findDeposit.price) < 0
+              ? 0
+              : item.totalBill + totalBill - (totalDeposit - findDeposit.price),
+          surplus: totalDeposit - (item.totalBill + totalBill),
+        });
+        newDeposit.push(findDeposit);
+        await BillModel.findByIdAndUpdate(
+          findDeposit._id,
+          {
+            $set: {
+              totalBill: findDeposit.totalBill,
+              surplus: findDeposit.surplus,
             },
-            { runValidators: false }
-          );
-        }
-
-        // console.log('item._id: ', item._id)
-        // console.log('comany._id: ', deposit[0].company._id)
-        // console.log('findDeposit: ', findDeposit)
+          },
+          { runValidators: false }
+        );
       }
+
+      // console.log('item._id: ', item._id)
+      // console.log('comany._id: ', deposit[0].company._id)
+      // console.log('findDeposit: ', findDeposit)
+    }
     deposit = await BillModel.find(
       { $and: [filter, { type: "deposit" }] },
       null,
