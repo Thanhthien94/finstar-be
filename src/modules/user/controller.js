@@ -618,23 +618,36 @@ const getBillInfo = async (req, res) => {
   const { role, _id } = req.decode;
   const { filters, options } = getParams(req);
   try {
+    const startMonth = (date) => {
+      const day = new Date(date);
+      const startMonth = new Date(
+        day.getFullYear(),
+        day.getMonth(),
+        1,
+        0,
+        0,
+        0,
+        0
+      );
+      return startMonth;
+    };
+
     const user = await UserModel.findById(_id);
     const filter = {};
+    const { company, gteDate } = req.query;
     if (!role.includes("root")) filter.company = user?.company;
-    if (res.query.company) filter.company = res.query.company;
+    if (company) filter.company = company;
 
     let deposit = await BillModel.find(
-      { $and: [filter, filters, { type: "deposit" }] },
+      { $and: [filter, { type: "deposit" }] },
       null,
       options
-    )
-      .populate("company")
-      .populate("user");
-    const create = await BillModel.find(
+    ).populate("company", ["name"]);
+    // .populate("user",["username"]);
+    let create = await BillModel.find(
       {
         $and: [
           filter,
-          filters,
           {
             type: {
               $in: [
@@ -650,13 +663,12 @@ const getBillInfo = async (req, res) => {
       null,
       options
     )
-      .populate("company")
-      .populate("user");
-    const sub = await BillModel.find(
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
+    let sub = await BillModel.find(
       {
         $and: [
           filter,
-          filters,
           {
             type: {
               $in: ["subViettel", "subVinaphone", "subMobifone", "subOthers"],
@@ -667,9 +679,9 @@ const getBillInfo = async (req, res) => {
       null,
       options
     )
-      .populate("company")
-      .populate("user");
-    const price = await BillModel.find(
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
+    let price = await BillModel.find(
       {
         $and: [
           filter,
@@ -689,8 +701,8 @@ const getBillInfo = async (req, res) => {
       null,
       options
     )
-      .populate("company")
-      .populate("user");
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
 
     const analysBillCDRByCompany = await CDRModel.aggregate([
       {
@@ -724,6 +736,7 @@ const getBillInfo = async (req, res) => {
       },
     ]);
     console.log("analysBillCDRByCompany: ", analysBillCDRByCompany);
+    if (gteDate) req.query.gteDate = startMonth(gteDate);
     const analysBillByType = await BillModel.aggregate([
       {
         $match: {
@@ -740,7 +753,7 @@ const getBillInfo = async (req, res) => {
               },
             },
             filter,
-            filters,
+            // filters,
           ], // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
         },
       },
@@ -770,76 +783,139 @@ const getBillInfo = async (req, res) => {
       },
     ]);
     let newDeposit = [];
-    for (const item of analysBillCDRByCompany[0].companies) {
-      let totalBill = 0;
-      let totalDeposit = 0;
-      create.map((el) => {
-        if (el.company._id.toString() == item._id.toString())
-          totalBill += el.price;
-      });
-      sub.map((el) => {
-        if (el.company._id.toString() == item._id.toString())
-          totalBill += el.price;
-      });
-      // console.log('totalBill: ', totalBill)
-      deposit.map((el) => {
-        if (el.company._id.toString() == item._id.toString())
-          totalDeposit += el.price;
-      });
-
-      const findDeposit = deposit.find(
-        (el) => el.company._id.toString() == item._id.toString()
-      );
-      if (findDeposit) {
-        Object.assign(findDeposit, {
-          totalBill:
-            item.totalBill + totalBill - (totalDeposit - findDeposit.price) < 0
-              ? 0
-              : item.totalBill + totalBill - (totalDeposit - findDeposit.price),
-          surplus: totalDeposit - (item.totalBill + totalBill),
+    // if (analysBillCDRByCompany.length)
+      for (const item of analysBillCDRByCompany[0].companies) {
+        let totalBill = 0;
+        let totalDeposit = 0;
+        create.map((el) => {
+          if (el.company._id.toString() == item._id.toString())
+            totalBill += el.price;
         });
-        newDeposit.push(findDeposit);
-        await BillModel.findByIdAndUpdate(
-          findDeposit._id,
-          {
-            $set: {
-              totalBill: findDeposit.totalBill,
-              surplus: findDeposit.surplus,
-            },
-          },
-          { runValidators: false }
-        );
-      }
+        sub.map((el) => {
+          if (el.company._id.toString() == item._id.toString())
+            totalBill += el.price;
+        });
+        // console.log('totalBill: ', totalBill)
+        deposit.map((el) => {
+          if (el.company._id.toString() == item._id.toString())
+            totalDeposit += el.price;
+        });
 
-      // console.log('item._id: ', item._id)
-      // console.log('comany._id: ', deposit[0].company._id)
-      // console.log('findDeposit: ', findDeposit)
-    }
+        const findDeposit = deposit.find(
+          (el) => el.company._id.toString() == item._id.toString()
+        );
+
+        // gán prop trước khi update DB
+        if (findDeposit) {
+          Object.assign(findDeposit, {
+            totalBill:
+              item.totalBill + totalBill - (totalDeposit - findDeposit.price) <
+              0
+                ? 0
+                : item.totalBill +
+                  totalBill -
+                  (totalDeposit - findDeposit.price),
+            surplus: totalDeposit - (item.totalBill + totalBill),
+          });
+          newDeposit.push(findDeposit);
+          await BillModel.findByIdAndUpdate(
+            findDeposit._id,
+            {
+              $set: {
+                totalBill: findDeposit.totalBill,
+                surplus: findDeposit.surplus,
+              },
+            },
+            { runValidators: false }
+          );
+        }
+
+        // console.log('item._id: ', item._id)
+        // console.log('comany._id: ', deposit[0].company._id)
+        // console.log('findDeposit: ', findDeposit)
+      }
     deposit = await BillModel.find(
-      { $and: [filter, filters, { type: "deposit" }] },
+      { $and: [filter, { type: "deposit" }] },
       null,
       options
     )
-      .populate("company")
-      .populate("user");
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
+
+    create = await BillModel.find(
+      {
+        $and: [
+          filter,
+          {
+            type: {
+              $in: [
+                "createViettel",
+                "createVinaphone",
+                "createMobifone",
+                "createOthers",
+              ],
+            },
+          },
+        ],
+      },
+      null,
+      options
+    )
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
+    sub = await BillModel.find(
+      {
+        $and: [
+          filter,
+          {
+            type: {
+              $in: ["subViettel", "subVinaphone", "subMobifone", "subOthers"],
+            },
+          },
+        ],
+      },
+      null,
+      options
+    )
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
+    price = await BillModel.find(
+      {
+        $and: [
+          filter,
+          {
+            type: {
+              $in: [
+                "priceViettel",
+                "priceVinaphone",
+                "priceMobifone",
+                "priceOthers",
+              ],
+            },
+          },
+        ],
+      },
+      null,
+      options
+    )
+      .populate("company", ["name"])
+      .populate("user", ["username"]);
 
     // console.log('analys: ', analys)
     // console.log('deposit: ', deposit)
     // console.log('newDeposit: ', newDeposit)
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Get list successful",
-        data: {
-          deposit,
-          create,
-          sub,
-          price,
-          analysBillByType,
-          analysBillCDRByCompany,
-        },
-      });
+    res.status(200).json({
+      success: true,
+      message: "Get list successful",
+      data: {
+        deposit,
+        create,
+        sub,
+        price,
+        analysBillByType,
+        analysBillCDRByCompany,
+      },
+    });
   } catch (error) {
     console.log({ error });
     res.status(400).json({
