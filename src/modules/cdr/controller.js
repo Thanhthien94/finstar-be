@@ -16,12 +16,14 @@ const fetchCDRMongo = async (req, res) => {
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company;
     // fecth CDR start
-    let Tags = []
     const usersTag = await UserModel.find({usersTag: user._id})
-    usersTag.map((item)=> {
-      Tags.push(item._id)
+    // console.log('userTags: ', usersTag)
+    let Tags = usersTag.map((item)=> {
+      return item._id
     })
-    if (!role.includes("admin")) filter.user = {$in: Tags.split(",").map(item => new mongoose.Types.ObjectId(item))};
+    Tags.push(user._id)
+    // console.log('Tags: ', Tags)
+    if (!role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
     const { filters, options } = getParamsCDRMongo(req);
     const total = await CDRModel.count({ $and: [filters, filter] });
     const result = await CDRModel.find(
@@ -121,6 +123,14 @@ const fetchTalkTime = async (req, res) => {
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company;
     // fecth CDR start
+    const usersTag = await UserModel.find({usersTag: user._id})
+    // console.log('userTags: ', usersTag)
+    let Tags = usersTag.map((item)=> {
+      return item._id
+    })
+    Tags.push(user._id)
+    // console.log('Tags: ', Tags)
+    if (!role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
     // req.query.cnum = { $ne: "" }
     const { filters, options } = getParamsCDRMongo(req);
     const analysTalkTime = await CDRModel.aggregate([

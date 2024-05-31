@@ -350,9 +350,9 @@ const updateCompanies = async (req, res) => {
 };
 
 const createAccessibility = async (req, res) => {
-  const { _id } = req.decode;
+  const { _id, role } = req.decode;
   try {
-    // if (role !== "root") throw new Error("User is not access");
+    if (!role.includes("root") && !role.includes("admin")) throw new Error("User is not access");
     const { name, descsiption } = req.body;
     if (!name) throw new Error("Vui lòng tên hành động");
     const findAccess = await AccessibilityModel.findOne({ name });
