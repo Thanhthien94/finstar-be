@@ -6,6 +6,8 @@ import { UserModel, CDRModel } from "../../controllers/mongodb/index.js";
 import { exportExcel } from "../../util/excel/excel.js";
 import axios from "axios";
 import { WORKER_PORT, WORKER_HOST } from "../../util/config/index.js";
+import mongoose from "mongoose";
+
 
 const fetchCDRMongo = async (req, res) => {
   try {
@@ -14,6 +16,12 @@ const fetchCDRMongo = async (req, res) => {
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company;
     // fecth CDR start
+    let Tags = []
+    const usersTag = await UserModel.find({usersTag: user._id})
+    usersTag.map((item)=> {
+      Tags.push(item._id)
+    })
+    if (!role.includes("admin")) filter.user = {$in: Tags.split(",").map(item => new mongoose.Types.ObjectId(item))};
     const { filters, options } = getParamsCDRMongo(req);
     const total = await CDRModel.count({ $and: [filters, filter] });
     const result = await CDRModel.find(

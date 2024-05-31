@@ -103,7 +103,7 @@ export const getParamsCDRMongo = (req) => {
   ) {
     filters.$and = [
       req.query.user ? { user: req.query.user } : {},
-      req.query._id ? { _id: req.query._id } : {},
+      req.query._id ? { _id: {$in: req.query._id.split(",").map(item => new mongoose.Types.ObjectId(item))} } : {},
       req.query.name ? { name: req.query.name } : {},
       req.query.cnum ? { cnum: req.query.cnum } : {},
       req.query.company ? { company: new mongoose.Types.ObjectId(req.query.company) } : {},
