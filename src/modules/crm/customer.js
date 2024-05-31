@@ -6,15 +6,11 @@ import { multiFilter } from "../../util/filtersParams/index.js";
 import {
   UserModel,
   CompanyModel,
-  LinkCardModel,
   BankModel,
-  DashBoardModel,
-  TaskModel,
 } from "../../controllers/mongodb/index.js";
 import { getParams } from "../../util/getParams/index.js";
 import { getRule } from "../../util/validation/getRule.js";
 import moment from "../../util/monent/moment.js";
-import cdr from "../cdr/controller.js";
 // import os from "os";
 import { APP_PORT, DOMAIN } from "../../util/config/index.js";
 
@@ -24,28 +20,8 @@ import { APP_PORT, DOMAIN } from "../../util/config/index.js";
 const port = APP_PORT;
 const domain = DOMAIN;
 const apiPath = "/api/crm/customer/download/pdf";
-// console.log(
-//   "networkInterface: ",
-//   networkInterfaces[Object.keys(networkInterfaces)[1]][0].address
-// );
-// console.log("date: ", new Date());
 
 let fetchCustomers = [];
-// setTimeout(async () => {
-//   fetchCustomers = await CustomerModel.find().lean().exec();
-// }, 1 * 10 * 1000);
-// setInterval(async () => {
-//   fetchCustomers = await CustomerModel.find().lean().exec();
-//   cdr.upadateFetchCustomers(fetchCustomers);
-// }, (5 * 60 + Math.floor(Math.random() * 10)) * 1000);
-
-// const upadateFetchCustomers = async () => {
-//   setTimeout(async () => {
-//     fetchCustomers = await CustomerModel.find().lean().exec();
-//     cdr.upadateFetchCustomers(fetchCustomers);
-//   }, 1000);
-// };
-
 const findCompany = () => {
   CompanyModel.find();
 };
@@ -57,239 +33,6 @@ const creatCustomer = async (req, res) => {
   await CustomerModel.create(customer);
   console.log({ id, customer });
   res.json(customer);
-};
-
-const createCustomerLinkCard = async (req, res) => {
-  try {
-    let customer = req.body;
-    // console.log("req.body:", req.body);
-    const { name, id, phone, identification, email, campaign, linkCard } =
-      customer;
-    if (phone.length !== 10) throw new Error("Định dạng SĐT không đúng");
-    if (identification.length !== 9 && identification.length !== 12)
-      throw new Error("Định dạng CMND hoặc CCCD không đúng");
-    const newDate = new Date();
-    if (!name) throw new Error("Chưa nhập Tên");
-    if (!phone) throw new Error("Chưa nhập SDT");
-    if (!identification) throw new Error("Chưa nhập CCCD/CMND");
-    const user = await UserModel.findById(id);
-    const companyTag = user.company;
-    const teamleadTag = user.teamleadTag || null;
-    const supervisorTag = user.supervisorTag || null;
-    const ASMTag = user.ASMTag || null;
-    const headTag = user.headTag || null;
-    const ADPTag = user.ADPTag || null;
-
-    const query = {
-      project: "link-card",
-      "linkCard.bank": linkCard.bank,
-      $or: [{ identification }, { phone }],
-    };
-
-    // console.log("user query", JSON.stringify(query));
-    const findCustomers = await CustomerModel.findOne(query);
-    // console.log({ findCustomers });
-    if (findCustomers) throw new Error("Thông tin đã tồn tại");
-
-    if (!findCustomers && user.role === "sales") {
-      const data = await CustomerModel.create({
-        name,
-        phone,
-        identification,
-        email,
-        project: "link-card",
-        campaign,
-        statusCode: "Pending",
-        linkCard,
-        companyTag,
-        salesTag: id,
-        teamleadTag,
-        supervisorTag,
-        ASMTag,
-        headTag,
-        ADPTag,
-        status: "Pending",
-      });
-      await UserModel.findByIdAndUpdate(id, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(teamleadTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(supervisorTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ASMTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(headTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ADPTag, {
-        newLead: { createdAt: newDate },
-      });
-      // const dataDashBoard = DashBoardModel.findOne({name: 'link-card', companyTag})
-      // await DashBoardModel.findOneAndUpdate({name: 'link-card', companyTag},{'data.bank': {[linkCard.bank]:{sub:{$inc:{'total':1}}, }}})
-      res
-        .status(200)
-        .json({ success: true, message: "Create successful", data });
-    } else if (!findCustomers && user.role === "teamlead") {
-      // customer = { ...customer, salesTag: id };
-      const data = await CustomerModel.create({
-        name,
-        phone,
-        identification,
-        email,
-        project: "link-card",
-        campaign,
-        statusCode: "Pending",
-        linkCard,
-        companyTag,
-        teamleadTag: id,
-        supervisorTag,
-        ASMTag,
-        headTag,
-        ADPTag,
-        status: "Pending",
-      });
-      await UserModel.findByIdAndUpdate(id, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(supervisorTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ASMTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(headTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ADPTag, {
-        newLead: { createdAt: newDate },
-      });
-      res
-        .status(200)
-        .json({ success: true, message: "Create successful", data });
-    } else if (!findCustomers && user.role === "supervisor") {
-      const data = await CustomerModel.create({
-        name,
-        phone,
-        identification,
-        email,
-        project: "link-card",
-        campaign,
-        statusCode: "Pending",
-        linkCard,
-        companyTag,
-        supervisorTag: id,
-        ASMTag,
-        headTag,
-        ADPTag,
-        status: "Pending",
-      });
-      await UserModel.findByIdAndUpdate(id, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ASMTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(headTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ADPTag, {
-        newLead: { createdAt: newDate },
-      });
-      res
-        .status(200)
-        .json({ success: true, message: "Create successful", data });
-    } else if (
-      (!findCustomers && user.role === "admin") ||
-      (!findCustomers && user.role === "root") ||
-      (!findCustomers && user.role === "ASM")
-    ) {
-      const data = await CustomerModel.create({
-        name,
-        phone,
-        identification,
-        email,
-        project: "link-card",
-        campaign,
-        statusCode: "Pending",
-        linkCard,
-        user: id,
-        companyTag,
-        teamleadTag,
-        supervisorTag,
-        ASMTag,
-        headTag,
-        ADPTag,
-        status: "Pending",
-      });
-      await UserModel.findByIdAndUpdate(id, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(headTag, {
-        newLead: { createdAt: newDate },
-      });
-      await UserModel.findByIdAndUpdate(ADPTag, {
-        newLead: { createdAt: newDate },
-      });
-      res
-        .status(200)
-        .json({ success: true, message: "Create successful", data });
-    }
-    // upadateFetchCustomers();
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
-const createTask = async (req, res) => {
-  try {
-    console.log("req.body: ", req.body);
-    const { id } = req.decode;
-    const { reminder, content, name, customerID, reminderFlagged } = req.body;
-    // const user = await UserModel.findById(id).lean().exec();
-    const findCustomer = await CustomerModel.findById(customerID).lean().exec();
-    await TaskModel.create({
-      name,
-      content,
-      reminderTime: new Date(reminder),
-      flagged: reminderFlagged,
-      user: id,
-      customer: customerID,
-      ADPTag: findCustomer.ADPTag,
-      headTag: findCustomer.headTag,
-      ASMTag: findCustomer.ASMTag,
-      supervisorTag: findCustomer.supervisorTag,
-      teamleadTag: findCustomer.teamleadTag,
-      salesTag: findCustomer.salesTag,
-      companyTag: findCustomer.companyTag,
-    });
-
-    // upadateFetchCustomers();
-    res.status(200).json({ success: true, message: "New task was created" });
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
-const updateTask = async (req, res) => {
-  try {
-    console.log("req.body: ", req.body);
-    const { id } = req.decode;
-    const { _id, status, flagged } = req.body;
-    await TaskModel.findByIdAndUpdate(_id, {
-      status,
-      flagged,
-    });
-
-    // upadateFetchCustomers();
-    res.status(200).json({ success: true, message: "Update task successful" });
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-  }
 };
 
 const getDashboard = async (req, res) => {
@@ -1142,52 +885,15 @@ const getPerformanceAMPM = async (req, res) => {
 
 const getCustomerList = async (req, res) => {
   try {
-    const { role, id } = req.decode;
-    const user = await UserModel.findById(id).populate("company").lean().exec();
-    // console.log({ role, id, user });
 
-    const companyTag = user?.company;
-    const headTag = id;
-    const ASMTag = id;
-    const supervisorTag = id;
-    const teamleadTag = id;
-    const salesTag = id;
-    const project = req.query.project;
+    const { role, _id } = req.decode;
+    const user = await UserModel.findById(_id);
+    const filter = {};
+    filter.project = req.query.project
+    if (!role.includes("root")) req.query.company = user.company;
     const { filters, options } = getParams(req);
-    let filterPlus = {};
-    let filterWithProject = project ? { project } : {};
-    if (role === "root") {
-      filterPlus = {};
-    }
-
-    if (role === "admin") {
-      filterPlus = { companyTag };
-      filterWithProject = project ? { companyTag, project } : { companyTag };
-    }
-    if (role === "head") {
-      filterPlus = { headTag };
-      filterWithProject = project ? { headTag, project } : { headTag };
-    }
-    if (role === "ASM") {
-      filterPlus = { ASMTag };
-      filterWithProject = project ? { ASMTag, project } : { ASMTag };
-    }
-    if (role === "supervisor") {
-      filterPlus = { supervisorTag };
-      filterWithProject = project
-        ? { supervisorTag, project }
-        : { supervisorTag };
-    }
-    if (role === "teamlead") {
-      filterPlus = { teamleadTag };
-      filterWithProject = project ? { teamleadTag, project } : { teamleadTag };
-    }
-    if (role === "sales") {
-      filterPlus = { salesTag };
-      filterWithProject = project ? { salesTag, project } : { salesTag };
-    }
     const result = await CustomerModel.find(
-      { ...filters, ...filterPlus },
+      { $and: [filters, filter] },
       null,
       options
     )
@@ -1198,28 +904,23 @@ const getCustomerList = async (req, res) => {
       .populate("autocallCampaign", ["name"]);
     const listImportFile = await CustomerModel.distinct(
       "importFile",
-      filterPlus
+      filter
     );
-    const listProject = await CustomerModel.distinct("project", filterPlus);
-    const listBank = await CustomerModel.distinct("linkCard.bank", {
-      ...filters,
-      ...filterPlus,
-    });
+    const listProject = await CustomerModel.distinct("project", filter);
     const listCampaign = await CustomerModel.distinct(
       "campaign",
-      filterWithProject
+      filter
     );
     const listStatusCode = await CustomerModel.distinct(
       "statusCode",
-      filterWithProject
+      filter
     );
     const listStatusAutocall = await CustomerModel.distinct(
       "autocallStatus",
-      filterWithProject
+      filter
     );
     const total = await CustomerModel.countDocuments({
-      ...filters,
-      ...filterPlus,
+      $and: [filter, filters]
     });
     const data = {
       role,
@@ -1229,122 +930,9 @@ const getCustomerList = async (req, res) => {
       page: options.skip + 1,
       listImportFile,
       listProject,
-      listBank,
       listCampaign,
       listStatusCode,
       listStatusAutocall,
-      data: result,
-    };
-    // console.log({data})
-    res
-      .status(200)
-      .json({ success: true, message: "get list successful", data });
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-    // next(error);
-  }
-};
-const getTaskList = async (req, res) => {
-  try {
-    const { role, id } = req.decode;
-    const user = await UserModel.findById(id).populate("company").lean().exec();
-    // console.log({ role, id, user });
-
-    const companyTag = user.company;
-    const headTag = id;
-    const ASMTag = id;
-    const supervisorTag = id;
-    const teamleadTag = id;
-    const salesTag = id;
-    const { filters, options } = getParams(req);
-    const today = {
-      $gte: new Date(new Date().setHours(-7, 0, 0)),
-      $lte: new Date(
-        new Date().setHours(-7, 0, 0) + 24 * 60 * 60 * 1000 - 1000
-      ),
-    }
-    const expired = {
-      $lte: new Date(new Date().getTime()),
-    }
-    const thisMonth = {
-      $gte: new Date(
-        new Date().setHours(-7, 0, 0) -
-          (new Date().getDate() - 1) * 24 * 60 * 60 * 1000
-      ),
-      $lte: new Date(
-        new Date(
-          new Date(new Date().setMonth(new Date().getMonth() + 1)).setDate(
-            new Date().getDate(1)
-          )
-        ).setHours(-7, 0, 0) - 1000
-      ),
-    }
-    let filterPlus = {};
-
-    if (req.query.flagged) {
-      filters.flagged = true;
-    }
-    if (req.query.completed) {
-      filters.status = req.query.completed;
-    }
-
-    if (req.query.reminderTime) {
-      if (req.query.reminderTime === "today") {
-        filters.reminderTime = today
-      } else if (req.query.reminderTime === "thisMonth") {
-        filters.reminderTime = thisMonth
-      } else if (req.query.reminderTime === "expired") {
-        filters.reminderTime = expired
-      }
-    }
-
-    if (role === "root") {
-      filterPlus = { ...filterPlus };
-    }
-
-    if (role === "admin") {
-      filterPlus = { ...filterPlus, companyTag };
-    }
-    if (role === "head") {
-      filterPlus = { ...filterPlus, headTag };
-    }
-    if (role === "ASM") {
-      filterPlus = { ...filterPlus, ASMTag };
-    }
-    if (role === "supervisor") {
-      filterPlus = { ...filterPlus, supervisorTag };
-    }
-    if (role === "teamlead") {
-      filterPlus = { ...filterPlus, teamleadTag };
-    }
-    if (role === "sales") {
-      filterPlus = { ...filterPlus, salesTag };
-    }
-    const result = await TaskModel.find({...filterPlus, ...filters}, null, options)
-      .populate("customer")
-      .populate("salesTag", ["name"])
-      .populate("teamleadTag", ["name"])
-      .populate("supervisorTag", ["name"])
-      .populate("user", ["userName", "name"]);
-
-    const total = await TaskModel.countDocuments(filterPlus);
-    const countToday = await TaskModel.countDocuments({...filterPlus, reminderTime: today, status: "Pending"});
-    const countThismonth = await TaskModel.countDocuments({...filterPlus, reminderTime: thisMonth, status: "Pending"});
-    const countCompleted = await TaskModel.countDocuments({...filterPlus, ...filters, status: "Done"});
-    const countExpired = await TaskModel.countDocuments({...filterPlus, reminderTime: expired, status: "Pending"});
-    const countFlagged = await TaskModel.countDocuments({...filterPlus, flagged: true});
-    const data = {
-      role,
-      countCompleted,
-      countExpired,
-      countFlagged,
-      countToday,
-      countThismonth,
-      total,
-      count: result.length,
-      limit: options.limit,
-      page: options.skip + 1,
       data: result,
     };
     // console.log({data})
@@ -1719,51 +1307,6 @@ const updateCustomer = async (req, res) => {
   }
 };
 
-const createCustomerReference = async (req, res) => {
-  try {
-    const { id, name, phone } = req.body;
-    const create = await ReferenceModel.create({ name, phone, customerId: id });
-    res
-      .status(200)
-      .json({ success: true, message: "Reference created", data: create });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ success: false, message: `Create failed - ${error.message}` });
-  }
-};
-
-const updateCustomerReference = async (req, res) => {
-  try {
-    const { id, data } = req.body;
-    // console.log({ id, data });
-    const update = await ReferenceModel.findByIdAndUpdate(id, data);
-    res
-      .status(200)
-      .json({ success: true, message: "Reference created", data: update });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ success: false, message: `Update failed - ${error.message}` });
-  }
-};
-
-const countList = async (req, res) => {
-  try {
-    const count = await CustomerModel.countDocuments();
-    res.status(200).json({
-      success: true,
-      message: "Count items is successful",
-      data: count,
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: `Count list failed - ${error.message}`,
-    });
-  }
-};
-
 const assignCustomer = async (req, res) => {
   const { role, id } = req.decode;
   // console.log({ role, _id })
@@ -1976,90 +1519,6 @@ const createBank = async (req, res) => {
       .json({ success: false, message: `Create failed - ${error.message}` });
   }
 };
-const createDashBoard = async (req, res) => {
-  try {
-    const { name, companyTag } = req.body;
-    const create = await DashBoardModel.create({ name, companyTag });
-    res
-      .status(200)
-      .json({ success: true, message: "DashBoard created", data: create });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ success: false, message: `Create failed - ${error.message}` });
-  }
-};
-
-const createLinkCard = async (req, res) => {
-  try {
-    const { name, link, type, typeCard, bankId } = req.body;
-    const create = await LinkCardModel.create({
-      name,
-      link: link.trim(),
-      type,
-      typeCard,
-      bankId,
-    });
-    res.status(200).json({
-      success: true,
-      message: `Link card ${name} created`,
-      data: create,
-    });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ success: false, message: `Create failed - ${error.message}` });
-  }
-};
-
-const updateLinkCard = async (req, res) => {
-  try {
-    const { id, status, name, link, image, updateStatus, content, typeCard } =
-      req.body;
-    if (updateStatus) {
-      // console.log("INPUT-STATUS: ", req.body);
-      const update = await LinkCardModel.findByIdAndUpdate(id, {
-        status,
-      });
-      res.status(200).json({
-        success: true,
-        message: `Update link-card ${update.name} successful`,
-        data: update,
-      });
-    } else {
-      // console.log("input: ", req.body);
-      const update = await LinkCardModel.findByIdAndUpdate(id, {
-        name,
-        link: link.trim(),
-        image,
-        content,
-        typeCard,
-      });
-      res.status(200).json({
-        success: true,
-        message: `Update link-card ${update.name} successful`,
-        data: update,
-      });
-    }
-  } catch (error) {
-    res
-      .status(400)
-      .json({ success: false, message: `Update failed - ${error.message}` });
-  }
-};
-
-const deleteLinkCard = async (req, res) => {
-  try {
-    const { _id } = req.body;
-    // console.log(req.body);
-    const data = await LinkCardModel.findByIdAndDelete(_id);
-    res.status(200).json({ success: true, message: `Link-card deleted`, data });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ success: false, message: `Delete failed - ${error.message}` });
-  }
-};
 
 const deleteCustomer = async (req, res) => {
   try {
@@ -2111,54 +1570,6 @@ const deleteCustomer = async (req, res) => {
   }
 };
 
-const getLinkCardList = async (req, res) => {
-  try {
-    const { id } = req.decode;
-    const { linkId } = req.query;
-    const params = {};
-    if (linkId) params._id = linkId;
-    // console.log({ role, id });
-
-    const user = await UserModel.findById(id);
-    const bank = await BankModel.find();
-    const linkcard = await LinkCardModel.find(params).populate("bankId", [
-      "name",
-    ]);
-
-    const data = {
-      user,
-      bank,
-      linkcard,
-    };
-    res
-      .status(200)
-      .json({ success: true, message: "get list successful", data });
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-    // next(error);
-  }
-};
-const findLinkCard = async (req, res) => {
-  try {
-    const { linkId } = req.body;
-    const linkcard = await LinkCardModel.findById(linkId).populate("bankId", [
-      "name",
-    ]);
-
-    const data = {
-      linkcard,
-    };
-    res
-      .status(200)
-      .json({ success: true, message: "get list successful", data });
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-    // next(error);
-  }
-};
-
 const uploadPdf = async (req, res) => {
   try {
     const { id } = req.body;
@@ -2169,19 +1580,6 @@ const uploadPdf = async (req, res) => {
     });
     // upadateFetchCustomers();
     res.status(200).json({ success: true, message: "upload file successful" });
-  } catch (error) {
-    console.log("ERROR", error);
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
-const uploadLinkcardImg = async (req, res) => {
-  try {
-    const { id } = req.body;
-    const filePath = req.file.path;
-    await LinkCardModel.findByIdAndUpdate(id, {
-      image: filePath,
-    });
-    res.status(200).json({ success: true, message: "upload image successful" });
   } catch (error) {
     console.log("ERROR", error);
     res.status(400).json({ success: false, message: error.message });
@@ -2513,28 +1911,14 @@ export default {
   uploadCustomer,
   assignCustomer,
   updateCustomer,
-  countList,
-  createCustomerReference,
-  updateCustomerReference,
   revokeCustomer,
   deleteImportFile,
   findCompany,
-  createLinkCard,
-  getLinkCardList,
-  updateLinkCard,
   createBank,
-  updateTask,
-  createDashBoard,
-  createCustomerLinkCard,
-  findLinkCard,
-  deleteLinkCard,
   uploadPdf,
   downLoadPdf,
   downLoadExel,
   downLoadExelTemplate,
-  uploadLinkcardImg,
   deleteCustomer,
-  createTask,
-  getTaskList,
   updateAllCustomer,
 };

@@ -40,9 +40,7 @@ const createUser = async (req, res) => {
       .json({ success: false, message: "Missing username or password" });
   }
   try {
-    console.log("decode: ", req.decode);
     const rolePermit = req.decode?.role;
-    console.log({ rolePermit });
     if (!rolePermit.includes("root")) throw new Error("User is not access");
     const user = await UserModel.findOne({ username });
     if (user) {
@@ -160,10 +158,8 @@ const getUser = async (req, res) => {
 };
 const updateUser = async (req, res) => {
   try {
-    // let user = {}
-    const rolePermit = req.decode.role;
-    // if (rolePermit !== "root" && rolePermit !== "admin")
-    //   throw new Error("Not permission");
+    const rolePermit = req.decode?.role;
+    if (!rolePermit.includes("root") && !rolePermit.includes("admin")) throw new Error("User is not access");
     const data = req.body;
     // console.log({ data });
     let {
@@ -181,27 +177,24 @@ const updateUser = async (req, res) => {
       usersTag,
       sipAccount,
     } = data;
-    console.log("data: ", data);
     const findUser = await UserModel.findOne({ username }).populate("role");
-    // console.log('finduser: ', findUser)
     if (findUser?.role.find((role) => role.name === "root"))
       throw new Error("Can not change user root");
-    // console.log(findUser);
     const updateUserTags = async (userId, newTags) => {
       await UserModel.findByIdAndUpdate(userId, {usersTag: newTags})
       const user = await UserModel.findById(userId).populate("usersTag");
-      console.log("user1: ", user);
+      // console.log("user1: ", user);
 
       // Hàm đệ quy để lấy tất cả usersTag của user
       const getAllTags = async (user) => {
         const tags = new Set(user.usersTag.map((tag) => tag._id.toString()));
-        console.log("tags: ", tags);
+        // console.log("tags: ", tags);
 
         for (const tag of user.usersTag) {
           const nestedUser = await UserModel.findById(tag).populate("usersTag");
           const nestedTags = await getAllTags(nestedUser);
           nestedTags.forEach(tags.add, tags);
-          console.log({ nestedTags, nestedUser });
+          // console.log({ nestedTags, nestedUser });
         }
 
         return tags;
