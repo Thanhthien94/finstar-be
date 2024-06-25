@@ -23,7 +23,7 @@ const fetchCDRMongo = async (req, res) => {
     })
     Tags.push(user._id)
     // console.log('Tags: ', Tags)
-    if (!role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
+    if (!role.includes("root") && !role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
     const { filters, options } = getParamsCDRMongo(req);
     const total = await CDRModel.count({ $and: [filters, filter] });
     const result = await CDRModel.find(
@@ -116,6 +116,7 @@ const fetchCDRMongo = async (req, res) => {
     res.status(400).json({ success: false, message: "Can not get list" });
   }
 };
+
 const fetchTalkTime = async (req, res) => {
   try {
     const { role, _id } = req.decode;
@@ -130,7 +131,7 @@ const fetchTalkTime = async (req, res) => {
     })
     Tags.push(user._id)
     // console.log('Tags: ', Tags)
-    if (!role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
+    if (!role.includes("root") && !role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
     // req.query.cnum = { $ne: "" }
     const { filters, options } = getParamsCDRMongo(req);
     const analysTalkTime = await CDRModel.aggregate([
@@ -386,7 +387,7 @@ const aggregateCDRLatest = async (req, res) => {
     if (!role.includes("root")) filter.company = user?.company;
     // fecth CDR start
     // req.query.cnum = { $ne: "" }
-    const { filters, options } = getParamsCDRMongo(req);
+    const { filters } = getParamsCDRMongo(req);
   try {
     const aggregateQuery = await CDRModel.aggregate([
       {

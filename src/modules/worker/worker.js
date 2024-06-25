@@ -191,65 +191,6 @@ const updateCDR = async () => {
 
 setInterval(updateCDR, 1 * 60 * 1000);
 
-const fetchCDRToDownload = async (req, res) => {
-  try {
-    const { filter, limit, offset, filterRole } = req.body;
-
-    const users = await UserModel.find(filterRole).lean().exec();
-    // fecth CDR start
-
-    const [result] = await Bluebird.all([
-      mysqlInstance.execQuery(
-        `SELECT calldate, cnum, dst, did, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter} ORDER BY cdr.calldate DESC LIMIT ${limit} OFFSET ${offset}`
-      ),
-    ]);
-
-    let resultMapUser = [];
-    for (const item of result) {
-      let name = "No Name";
-      const itemValidate = {
-        ...item,
-        billsec:
-          item.disposition === "NO ANSWER" && item.billsec > 0
-            ? 0
-            : item.disposition === "ANSWERED" && item.billsec === 0
-            ? 1
-            : item.billsec,
-        linkRecord: `https://${DOMAIN}/admin/recordings/${String(
-          item.recordingfile.split("-")[3]
-        ).slice(0, 4)}/${String(item.recordingfile.split("-")[3]).slice(
-          4,
-          6
-        )}/${String(item.recordingfile.split("-")[3]).slice(6, 8)}/${
-          item.recordingfile
-        }`,
-      };
-      users.map((user) => {
-        if (user.sipAccount.extension === item.cnum) {
-          name = user.name;
-        }
-      });
-      resultMapUser.push({ name, ...itemValidate });
-    }
-    let dataExport = [];
-    resultMapUser.map((item) => {
-      const dataMap = {
-        Tên: item.name,
-        "Thời Điểm Thực Hiện Cuộc Gọi": item.calldate,
-        "Line Nội Bộ": item.cnum,
-        "Gọi Đến Số": item.dst,
-        "Thời Lượng": item.duration,
-        "Đàm Thoại": item.billsec,
-        "Trạng Thái Cuộc Gọi": item.disposition,
-      };
-      dataExport.push(dataMap);
-    });
-    res.status(200).send(dataExport);
-  } catch (error) {
-    res.status(400).json({ success: false, message: "Can not get list" });
-  }
-};
-
 const migrateCDR = async (req, res) => {
   try {
     console.log("query: ", req.query);
@@ -424,6 +365,65 @@ const migrateCDR = async (req, res) => {
   } catch (error) {
     console.log(error.message);
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const fetchCDRToDownload = async (req, res) => {
+  try {
+    const { filter, limit, offset, filterRole } = req.body;
+
+    const users = await UserModel.find(filterRole).lean().exec();
+    // fecth CDR start
+
+    const [result] = await Bluebird.all([
+      mysqlInstance.execQuery(
+        `SELECT calldate, cnum, dst, did, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter} ORDER BY cdr.calldate DESC LIMIT ${limit} OFFSET ${offset}`
+      ),
+    ]);
+
+    let resultMapUser = [];
+    for (const item of result) {
+      let name = "No Name";
+      const itemValidate = {
+        ...item,
+        billsec:
+          item.disposition === "NO ANSWER" && item.billsec > 0
+            ? 0
+            : item.disposition === "ANSWERED" && item.billsec === 0
+            ? 1
+            : item.billsec,
+        linkRecord: `https://${DOMAIN}/admin/recordings/${String(
+          item.recordingfile.split("-")[3]
+        ).slice(0, 4)}/${String(item.recordingfile.split("-")[3]).slice(
+          4,
+          6
+        )}/${String(item.recordingfile.split("-")[3]).slice(6, 8)}/${
+          item.recordingfile
+        }`,
+      };
+      users.map((user) => {
+        if (user.sipAccount.extension === item.cnum) {
+          name = user.name;
+        }
+      });
+      resultMapUser.push({ name, ...itemValidate });
+    }
+    let dataExport = [];
+    resultMapUser.map((item) => {
+      const dataMap = {
+        Tên: item.name,
+        "Thời Điểm Thực Hiện Cuộc Gọi": item.calldate,
+        "Line Nội Bộ": item.cnum,
+        "Gọi Đến Số": item.dst,
+        "Thời Lượng": item.duration,
+        "Đàm Thoại": item.billsec,
+        "Trạng Thái Cuộc Gọi": item.disposition,
+      };
+      dataExport.push(dataMap);
+    });
+    res.status(200).send(dataExport);
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Can not get list" });
   }
 };
 
