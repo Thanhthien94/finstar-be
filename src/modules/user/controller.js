@@ -15,7 +15,6 @@ import argon2 from "argon2";
 import auth from "../../util/authentication/auth.js";
 import { exportExcel } from "../../util/excel/excel.js";
 import moment from "../../util/monent/moment.js";
-import { populate } from "dotenv";
 
 const { generateToken } = auth;
 const createUser = async (req, res) => {
@@ -76,7 +75,7 @@ const createUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   try {
-    const id = req.decode.id;
+    const id = req.decode._id;
     const { newPassword } = req.body;
     const user = await UserModel.findById(id);
     if (!user) {
@@ -91,18 +90,20 @@ const changePassword = async (req, res) => {
 };
 const resetPassword = async (req, res) => {
   try {
-    const id = req.body._id;
+    const rolePermit = req.decode?.role;
+    const username = req.body.username;
+    if (!rolePermit.includes("root") && !rolePermit.includes("admin")) throw new Error("User is not access");
     // const role = req.decode.role;
-    console.log("id: ", id);
+    console.log("body: ", req.body);
 
     const newPassword = "12345678";
-    const user = await UserModel.findById(id);
+    const user = await UserModel.findOne({username});
     if (!user) {
       throw new Error("user not found");
     }
     const hashedPassword = await argon2.hash(newPassword);
-    await UserModel.findByIdAndUpdate(id, { password: hashedPassword });
-    res.status(200).json({ success: true, message: "New password is changed" });
+    await UserModel.findOneAndUpdate({username}, { password: hashedPassword });
+    res.status(200).json({ success: true, message: "Reset successful - New password is 12345678" });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -161,7 +162,6 @@ const updateUser = async (req, res) => {
     const rolePermit = req.decode?.role;
     if (!rolePermit.includes("root") && !rolePermit.includes("admin")) throw new Error("User is not access");
     const data = req.body;
-    // console.log({ data });
     let {
       username,
       firstname,
@@ -204,8 +204,8 @@ const updateUser = async (req, res) => {
       newTags.forEach(allTags.add, allTags);
 
       const news = Array.from(allTags);
-      console.log("user2: ", user);
-      console.log("new: ", news);
+      // console.log("user2: ", user);
+      // console.log("new: ", news);
       await UserModel.findByIdAndUpdate(user._id, {usersTag: news});
       // await user.save();
     };
