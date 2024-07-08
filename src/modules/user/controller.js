@@ -124,7 +124,7 @@ const getListUsers = async (req, res) => {
     let filter = {};
     const user = await UserModel.findById(_id);
     if (!role.includes("root")) filter = { company: user.company };
-    if (!role.includes("admin")) filter = { ...filter, usersTag: _id };
+    if (!role.includes("root") && !role.includes("admin")) filter = { ...filter, usersTag: _id };
     const { filters, options } = getParams(req);
     let filterPlus = {};
     const users = await UserModel.find(
