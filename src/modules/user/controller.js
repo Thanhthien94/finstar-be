@@ -92,18 +92,27 @@ const resetPassword = async (req, res) => {
   try {
     const rolePermit = req.decode?.role;
     const username = req.body.username;
-    if (!rolePermit.includes("root") && !rolePermit.includes("admin")) throw new Error("User is not access");
+    if (!rolePermit.includes("root") && !rolePermit.includes("admin"))
+      throw new Error("User is not access");
     // const role = req.decode.role;
     console.log("body: ", req.body);
 
     const newPassword = "12345678";
-    const user = await UserModel.findOne({username});
+    const user = await UserModel.findOne({ username });
     if (!user) {
       throw new Error("user not found");
     }
     const hashedPassword = await argon2.hash(newPassword);
-    await UserModel.findOneAndUpdate({username}, { password: hashedPassword });
-    res.status(200).json({ success: true, message: "Reset successful - New password is 12345678" });
+    await UserModel.findOneAndUpdate(
+      { username },
+      { password: hashedPassword }
+    );
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Reset successful - New password is 12345678",
+      });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -115,6 +124,7 @@ const getListUsers = async (req, res) => {
     let filter = {};
     const user = await UserModel.findById(_id);
     if (!role.includes("root")) filter = { company: user.company };
+    if (!role.includes("admin")) filter = { ...filter, usersTag: _id };
     const { filters, options } = getParams(req);
     let filterPlus = {};
     const users = await UserModel.find(
@@ -160,7 +170,8 @@ const getUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const rolePermit = req.decode?.role;
-    if (!rolePermit.includes("root") && !rolePermit.includes("admin")) throw new Error("User is not access");
+    if (!rolePermit.includes("root") && !rolePermit.includes("admin"))
+      throw new Error("User is not access");
     const data = req.body;
     let {
       username,
@@ -181,7 +192,7 @@ const updateUser = async (req, res) => {
     if (findUser?.role.find((role) => role.name === "root"))
       throw new Error("Can not change user root");
     const updateUserTags = async (userId, newTags) => {
-      await UserModel.findByIdAndUpdate(userId, {usersTag: newTags})
+      await UserModel.findByIdAndUpdate(userId, { usersTag: newTags });
       const user = await UserModel.findById(userId).populate("usersTag");
       // console.log("user1: ", user);
 
@@ -206,7 +217,7 @@ const updateUser = async (req, res) => {
       const news = Array.from(allTags);
       // console.log("user2: ", user);
       // console.log("new: ", news);
-      await UserModel.findByIdAndUpdate(user._id, {usersTag: news});
+      await UserModel.findByIdAndUpdate(user._id, { usersTag: news });
       // await user.save();
     };
 
@@ -262,7 +273,7 @@ const updateUser = async (req, res) => {
           type,
           title,
           sipAccount,
-          usersTag: []
+          usersTag: [],
         }
       );
     }
@@ -352,7 +363,8 @@ const updateCompanies = async (req, res) => {
 const createAccessibility = async (req, res) => {
   const { _id, role } = req.decode;
   try {
-    if (!role.includes("root") && !role.includes("admin")) throw new Error("User is not access");
+    if (!role.includes("root") && !role.includes("admin"))
+      throw new Error("User is not access");
     const { name, descsiption } = req.body;
     if (!name) throw new Error("Vui lòng tên hành động");
     const findAccess = await AccessibilityModel.findOne({ name });

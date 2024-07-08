@@ -60,7 +60,7 @@ app.post("/auth/login", async (req, res) => {
       throw new Error("username or password is missing");
     } else {
       const user = await UserModel.findOne({ username }).populate('role')
-      const roles = user.role.map(item => item.name)
+      const roles = user?.role?.map(item => item.name)
       if (user?.status === 'Locked') throw new Error('User has been locked')
       if (!user) {
         throw new Error("User or Password is not valid");
