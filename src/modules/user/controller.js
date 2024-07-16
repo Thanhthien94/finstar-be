@@ -210,7 +210,7 @@ const updateUser = async (req, res) => {
 
         return tags;
       };
-
+      
       const allTags = await getAllTags(user);
       newTags.forEach(allTags.add, allTags);
 
