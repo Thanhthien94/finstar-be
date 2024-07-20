@@ -48,6 +48,7 @@ Router.get("/role", verifyToken, user.getRoles);
 Router.post("/pbx", verifyToken, user.createNewPBX);
 Router.get("/pbx", verifyToken, user.getPBXs);
 Router.post("/sip", verifyToken, user.createNewSIP);
+Router.put("/sip", verifyToken, user.updateSIP);
 Router.get("/sip", verifyToken, user.getSIPs);
 Router.post("/prefix", verifyToken, user.createNewTelcoPrefix);
 Router.get("/prefix", verifyToken, user.getPBXs);

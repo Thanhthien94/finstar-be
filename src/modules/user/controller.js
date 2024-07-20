@@ -504,11 +504,10 @@ const getSIPs = async (req, res) => {
 const updateSIP = async (req, res) => {
   const { role } = req.decode;
   try {
-    const { _id, extension, password, pbx } = req.body;
+    const { _id, extension, password } = req.body;
 
-    if (role !== "root" && role !== "admin")
-      throw new Error("User is not access");
-    await CompanyModel.findByIdAndUpdate(_id, { extension, password, pbx });
+    if (!role.includes("root")) throw new Error("User is not access");
+    await CompanyModel.findByIdAndUpdate(_id, { extension, password });
     res.status(200).json({ success: true, message: "Update Successful" });
   } catch (error) {
     res.status(400).json({
