@@ -31,7 +31,7 @@ export const getParams = (req) => {
     req.query._id ||
     req.query.project ||
     req.query.statusCode ||
-    req.query.bank ||
+    req.query.dst ||
     req.query.name ||
     req.query.company ||
     req.query.status ||
@@ -58,7 +58,7 @@ export const getParams = (req) => {
       req.query.company ? { company: new mongoose.Types.ObjectId(req.query.company) } : {},
       req.query.project ? { project: req.query.project } : {},
       req.query.campaign ? { campaign: req.query.campaign } : {},
-      req.query.bank ? { "linkCard.bank": req.query.bank } : {},
+      req.query.dst ? { dst: req.query.dst } : {},
       req.query.statusCode
         ? req.query.statusCode === "notNone"
           ? { statusCode: { $ne: "Không có trạng thái" } }

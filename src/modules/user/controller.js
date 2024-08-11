@@ -631,7 +631,7 @@ const updateTelcoPrefix = async (req, res) => {
 };
 
 const getTelcoPrefix = async (req, res) => {
-  const { role, id } = req.decode;
+  const { role } = req.decode;
   try {
     if (!role.includes("root")) throw new Error("User is not access");
     let filter = {};
@@ -650,10 +650,10 @@ const getTelcoPrefix = async (req, res) => {
 
 const createNewBillInfo = async (req, res) => {
   const { role } = req.decode;
-  console.log("role: ", role);
+  // console.log("role: ", role);
   try {
     if (!role.includes("root")) throw new Error("User is not access");
-    const { name, type, price, company, user } = req.body;
+    const { name, type, price, price2, price3, company, user } = req.body;
     console.log("body: ", req.body);
     if (!name) throw new Error("Vui lòng nhập tên hoặc mô tả");
 
@@ -661,6 +661,8 @@ const createNewBillInfo = async (req, res) => {
       name,
       type,
       price,
+      price2,
+      price3,
       company,
       user,
     });
@@ -780,6 +782,16 @@ const getBillInfo = async (req, res) => {
               $toDouble: "$bill", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
             },
           },
+          totalBill2: {
+            $sum: {
+              $toDouble: "$bill2", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+            },
+          },
+          totalBill3: {
+            $sum: {
+              $toDouble: "$bill3", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+            },
+          },
         },
       },
       {
@@ -788,16 +800,24 @@ const getBillInfo = async (req, res) => {
           total: {
             $sum: "$totalBill", // Tính tổng của các tổng 'bill' theo nhóm 'telco'
           },
+          total2: {
+            $sum: "$totalBill2", // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+          },
+          total3: {
+            $sum: "$totalBill3", // Tính tổng của các tổng 'bill' theo nhóm 'telco'
+          },
           companies: {
             $push: {
               _id: "$_id",
               totalBill: "$totalBill",
+              totalBill2: "$totalBill2",
+              totalBill3: "$totalBill3",
             },
           },
         },
       },
     ]);
-    console.log("analysBillCDRByCompany: ", analysBillCDRByCompany);
+    // console.log("analysBillCDRByCompany: ", analysBillCDRByCompany);
     if (gteDate) req.query.gteDate = startMonth(gteDate);
     const analysBillByType = await BillModel.aggregate([
       {
@@ -874,7 +894,17 @@ const getBillInfo = async (req, res) => {
             item.totalBill + totalBill - (totalDeposit - findDeposit.price) < 0
               ? 0
               : item.totalBill + totalBill - (totalDeposit - findDeposit.price),
+          totalBill2:
+            item.totalBill2 + totalBill - (totalDeposit - findDeposit.price) < 0
+              ? 0
+              : item.totalBill2 + totalBill - (totalDeposit - findDeposit.price),
+          totalBill3:
+            item.totalBill3 + totalBill - (totalDeposit - findDeposit.price) < 0
+              ? 0
+              : item.totalBill3 + totalBill - (totalDeposit - findDeposit.price),
           surplus: totalDeposit - (item.totalBill + totalBill),
+          surplus2: totalDeposit - (item.totalBill2 + totalBill),
+          surplus3: totalDeposit - (item.totalBill3 + totalBill),
         });
         newDeposit.push(findDeposit);
         await BillModel.findByIdAndUpdate(
@@ -882,7 +912,11 @@ const getBillInfo = async (req, res) => {
           {
             $set: {
               totalBill: findDeposit.totalBill,
+              totalBill2: findDeposit.totalBill2,
+              totalBill3: findDeposit.totalBill3,
               surplus: findDeposit.surplus,
+              surplus2: findDeposit.surplus2,
+              surplus3: findDeposit.surplus3,
             },
           },
           { runValidators: false }

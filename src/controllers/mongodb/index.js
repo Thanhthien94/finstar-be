@@ -10,7 +10,6 @@ import { UserModel } from "./models/User.js";
 import { TimeGroupModel } from "./models/TimeGroup.js";
 import { CustomerModel } from "./models/Customer.js";
 import { CompanyModel } from "./models/Company.js";
-import { LinkCardModel } from "./models/LinkCard.js"
 import { BankModel } from "./models/Bank.js";
 import { UserRequestModel } from "./models/UserRequest.js";
 import { DashBoardModel } from "./models/DashBoard.js";
@@ -93,7 +92,6 @@ export {
   CustomerModel,
   TimeGroupModel,
   CompanyModel,
-  LinkCardModel,
   BankModel,
   DashBoardModel,
   TaskModel,

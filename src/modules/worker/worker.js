@@ -67,7 +67,9 @@ const updateCDR = async () => {
       const dst = result.dst === "tdial" ? result.did : result.dst;
       const checkNumber = dst.slice(0, 3);
       let telco = "";
-      let bill = "";
+      let bill = 0;
+      let bill2 = 0;
+      let bill3 = 0;
       let billID = null;
       const customer = await CustomerModel.findOne({ phone: dst });
       const findUser = SIPs.find(
@@ -95,6 +97,14 @@ const updateCDR = async () => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceViettel?.price || 0) / 60) * 6
               : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceViettel?.price2 || 0) / 60) * 6
+              : (Number(priceViettel?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceViettel?.price3 || 0) / 60) * 6
+              : (Number(priceViettel?.price3 || 0) / 60) * Number(billsec);
         }
         if (vinaphone.includes(checkNumber)) {
           telco = "vinaphone";
@@ -103,6 +113,14 @@ const updateCDR = async () => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceVinaphone?.price || 0) / 60) * 6
               : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceVinaphone?.price2 || 0) / 60) * 6
+              : (Number(priceVinaphone?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceVinaphone?.price3 || 0) / 60) * 6
+              : (Number(priceVinaphone?.price3 || 0) / 60) * Number(billsec);
         }
         if (mobifone.includes(checkNumber)) {
           telco = "mobifone";
@@ -111,6 +129,14 @@ const updateCDR = async () => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceMobifone?.price || 0) / 60) * 6
               : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceMobifone?.price2 || 0) / 60) * 6
+              : (Number(priceMobifone?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceMobifone?.price3 || 0) / 60) * 6
+              : (Number(priceMobifone?.price3 || 0) / 60) * Number(billsec);
         }
         if (others.includes(checkNumber)) {
           telco = "others";
@@ -119,6 +145,14 @@ const updateCDR = async () => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceOthers?.price || 0) / 60) * 6
               : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceOthers?.price2 || 0) / 60) * 6
+              : (Number(priceOthers?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceOthers?.price3 || 0) / 60) * 6
+              : (Number(priceOthers?.price3 || 0) / 60) * Number(billsec);
         }
         const dstName = customer?.name;
         const dstID =
@@ -165,6 +199,8 @@ const updateCDR = async () => {
           duration,
           billsec,
           bill,
+          bill2,
+          bill3,
           billID,
           disposition,
           lastapp,
@@ -246,7 +282,9 @@ const migrateCDR = async (req, res) => {
       const dst = result.dst === "tdial" ? result.did : result.dst;
       const checkNumber = dst.slice(0, 3);
       let telco = "";
-      let bill = "";
+      let bill = 0;
+      let bill2 = 0;
+      let bill3 = 0;
       let billID = null;
       const customer = await CustomerModel.findOne({ phone: dst });
       const findUser = SIPs.find(
@@ -274,6 +312,14 @@ const migrateCDR = async (req, res) => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceViettel?.price || 0) / 60) * 6
               : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceViettel?.price2 || 0) / 60) * 6
+              : (Number(priceViettel?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceViettel?.price3 || 0) / 60) * 6
+              : (Number(priceViettel?.price3 || 0) / 60) * Number(billsec);
         }
         if (vinaphone.includes(checkNumber)) {
           telco = "vinaphone";
@@ -282,6 +328,14 @@ const migrateCDR = async (req, res) => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceVinaphone?.price || 0) / 60) * 6
               : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceVinaphone?.price2 || 0) / 60) * 6
+              : (Number(priceVinaphone?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceVinaphone?.price3 || 0) / 60) * 6
+              : (Number(priceVinaphone?.price3 || 0) / 60) * Number(billsec);
         }
         if (mobifone.includes(checkNumber)) {
           telco = "mobifone";
@@ -290,6 +344,14 @@ const migrateCDR = async (req, res) => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceMobifone?.price || 0) / 60) * 6
               : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceMobifone?.price2 || 0) / 60) * 6
+              : (Number(priceMobifone?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceMobifone?.price3 || 0) / 60) * 6
+              : (Number(priceMobifone?.price3 || 0) / 60) * Number(billsec);
         }
         if (others.includes(checkNumber)) {
           telco = "others";
@@ -298,6 +360,14 @@ const migrateCDR = async (req, res) => {
             Number(billsec) > 0 && Number(billsec) <= 6
               ? (Number(priceOthers?.price || 0) / 60) * 6
               : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
+          bill2 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceOthers?.price2 || 0) / 60) * 6
+              : (Number(priceOthers?.price2 || 0) / 60) * Number(billsec);
+          bill3 =
+            Number(billsec) > 0 && Number(billsec) <= 6
+              ? (Number(priceOthers?.price3 || 0) / 60) * 6
+              : (Number(priceOthers?.price3 || 0) / 60) * Number(billsec);
         }
         const dstName = customer?.name;
         const dstID =
@@ -344,6 +414,8 @@ const migrateCDR = async (req, res) => {
           duration,
           billsec,
           bill,
+          bill2,
+          bill3,
           billID,
           disposition,
           lastapp,
