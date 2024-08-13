@@ -158,6 +158,16 @@ const fetchTalkTime = async (req, res) => {
               $toDouble: "$bill", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
             },
           },
+          totalBill2: {
+            $sum: {
+              $toDouble: "$bill2", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+            },
+          },
+          totalBill3: {
+            $sum: {
+              $toDouble: "$bill3", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+            },
+          },
           cnums: { $addToSet: "$cnum" }, // Lưu tất cả các cnum của mỗi user vào mảng, sử dụng $addToSet để tránh trùng lặp
         },
       },
@@ -179,6 +189,8 @@ const fetchTalkTime = async (req, res) => {
           username: "$user.username", // Chỉ lấy trường `username` từ `user`
           totalTalkTime: 1, // Giữ lại trường tổng billsec
           totalBill: 1, // Giữ lại trường tổng billsec
+          totalBill2: 1, // Giữ lại trường tổng billsec
+          totalBill3: 1, // Giữ lại trường tổng billsec
           cnums: 1, // Giữ lại trường cnums
         },
       },
@@ -194,6 +206,8 @@ const fetchTalkTime = async (req, res) => {
               username: "$username",
               totalTalkTime: "$totalTalkTime",
               totalBill: "$totalBill",
+              totalBill2: "$totalBill2",
+              totalBill3: "$totalBill3",
               cnums: "$cnums",
             },
           },
