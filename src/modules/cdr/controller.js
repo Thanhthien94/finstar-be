@@ -137,80 +137,74 @@ const fetchTalkTime = async (req, res) => {
     const analysTalkTime = await CDRModel.aggregate([
       {
         $match: {
-          $and: [
-            { disposition: "ANSWERED" },
-            filter,
-            filters,
-            // { cnum: { $ne: "" } },
-          ], // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+          $and: [filter, filters],
         },
       },
       {
         $group: {
-          _id: "$user", // Nhóm theo user
+          _id: "$user",
           totalTalkTime: {
             $sum: {
-              $toDouble: "$billsec", // Chuyển đổi giá trị của 'billsec' sang kiểu số và tính tổng
+              $toDouble: {
+                $cond: [{ $eq: ["$disposition", "ANSWERED"] }, "$billsec", 0],
+              },
             },
           },
           totalBill: {
             $sum: {
-              $toDouble: "$bill", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+              $toDouble: {
+                $cond: [{ $eq: ["$disposition", "ANSWERED"] }, "$bill", 0],
+              },
             },
           },
           totalBill2: {
             $sum: {
-              $toDouble: "$bill2", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+              $toDouble: {
+                $cond: [{ $eq: ["$disposition", "ANSWERED"] }, "$bill2", 0],
+              },
             },
           },
           totalBill3: {
             $sum: {
-              $toDouble: "$bill3", // Chuyển đổi giá trị của 'bill' sang kiểu số và tính tổng
+              $toDouble: {
+                $cond: [{ $eq: ["$disposition", "ANSWERED"] }, "$bill3", 0],
+              },
             },
           },
-          cnums: { $addToSet: "$cnum" }, // Lưu tất cả các cnum của mỗi user vào mảng, sử dụng $addToSet để tránh trùng lặp
+          totalAnswered: {
+            $sum: {
+              $cond: [{ $eq: ["$disposition", "ANSWERED"] }, 1, 0],
+            },
+          },
+          totalCall: {
+            $sum: 1, // Đếm tổng số document không phụ thuộc vào `disposition`
+          },
+          cnums: { $addToSet: "$cnum" },
         },
       },
       {
         $lookup: {
-          from: "users", // Tên collection của user model
-          localField: "_id", // Trường userId sau khi nhóm
-          foreignField: "_id", // Trường _id của user model
-          as: "user", // Kết quả join sẽ lưu vào trường `user`
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
         },
       },
       {
-        $unwind: "$user", // Giải nén kết quả populate từ mảng thành object
+        $unwind: "$user",
       },
       {
         $project: {
-          _id: 0, // Bỏ trường _id
-          userId: "$user._id", // Giữ lại trường userId
-          username: "$user.username", // Chỉ lấy trường `username` từ `user`
-          totalTalkTime: 1, // Giữ lại trường tổng billsec
-          totalBill: 1, // Giữ lại trường tổng billsec
-          totalBill2: 1, // Giữ lại trường tổng billsec
-          totalBill3: 1, // Giữ lại trường tổng billsec
-          cnums: 1, // Giữ lại trường cnums
-        },
-      },
-      {
-        $group: {
-          _id: null, // Không nhóm theo trường nào cả
-          totalTalkTimeSum: {
-            $sum: {$floor: "$totalTalkTime"}, // Tính tổng của các tổng 'talktime' theo nhóm 'user'
-          },
-          totalTalkTimeByUser: {
-            $push: {
-              userId: "$userId",
-              username: "$username",
-              totalTalkTime: "$totalTalkTime",
-              totalBill: "$totalBill",
-              totalBill2: "$totalBill2",
-              totalBill3: "$totalBill3",
-              cnums: "$cnums",
-            },
-          },
+          _id: 0,
+          userId: "$user._id",
+          username: "$user.username",
+          totalTalkTime: 1,
+          totalBill: 1,
+          totalBill2: 1,
+          totalBill3: 1,
+          totalAnswered: 1,
+          totalCall: 1,
+          cnums: 1,
         },
       },
     ]);
@@ -220,7 +214,7 @@ const fetchTalkTime = async (req, res) => {
       data: {
         page: options?.skip + 1,
         limit: options?.limit,
-        analysTalkTime: analysTalkTime[0]|| null,
+        analysTalkTime: analysTalkTime|| [],
       },
     });
   } catch (error) {
