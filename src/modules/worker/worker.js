@@ -605,10 +605,31 @@ const removeRule = (req, res) => {
   }
 };
 
+const restartPBX = (req, res) => {
+  try {
+
+    const command = `docker exec -it izpbx bash -c "fwconsole restart"`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return res.status(500).send(`Error: ${stderr}`);
+      }
+      res.status(200).json({
+        success: true,
+        message: "PBX Restarted",
+      });
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export default {
   fetchCDRToDownload,
   migrateCDR,
   getRuleIptables,
   addBlackList,
   removeRule,
+  restartPBX,
 };
