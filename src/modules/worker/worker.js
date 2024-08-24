@@ -608,7 +608,7 @@ const removeRule = (req, res) => {
 const restartPBX = (req, res) => {
   try {
 
-    const command = `docker exec -it izpbx bash -c "fwconsole restart"`;
+    const command = `docker exec izpbx bash -c "fwconsole restart"`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
