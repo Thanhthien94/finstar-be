@@ -198,6 +198,8 @@ const fetchTalkTime = async (req, res) => {
           _id: 0,
           userId: "$user._id",
           username: "$user.username",
+          firstname: "$user.firstname",
+          lastname: "$user.lastname",
           totalTalkTime: 1,
           totalBill: 1,
           totalBill2: 1,
