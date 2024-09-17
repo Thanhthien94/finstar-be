@@ -134,6 +134,7 @@ const fetchTalkTime = async (req, res) => {
     if (!role.includes("root") && !role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
     // req.query.cnum = { $ne: "" }
     const { filters, options } = getParamsCDRMongo(req);
+    console.log('filters: ', filters)
     const analysTalkTime = await CDRModel.aggregate([
       {
         $match: {

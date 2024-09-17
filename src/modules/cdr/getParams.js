@@ -89,7 +89,24 @@ export const getParamsCDRMongo = (req) => {
     options.skip = 0;
   }
 
-  if (
+  const keyword = req.query.keyword;
+  console.log('keyword: ', keyword)
+  if (keyword) {
+    filters.$or = [
+      { firstname: { $regex: keyword, $options: "i" } },
+      { lastname: { $regex: keyword, $options: "i" } },
+      { username: { $regex: keyword, $options: "i" } },
+      { email: { $regex: keyword, $options: "i" } },
+      { phone: { $regex: keyword, $options: "i" } },
+      { identification: { $regex: keyword, $options: "i" } },
+      { statusCode: { $regex: keyword, $options: "i" } },
+      { status: { $regex: keyword, $options: "i" } },
+      { codeSHB: { $regex: keyword, $options: "i" } },
+      { codeMAFC: { $regex: keyword, $options: "i" } },
+      { cnum: { $regex: keyword, $options: "i" } },
+      { dst: { $regex: keyword, $options: "i" } },
+    ];
+  } else if (
     req.query._id ||
     req.query.user ||
     req.query.name ||
@@ -133,22 +150,6 @@ export const getParamsCDRMongo = (req) => {
           ? { pathFile: { $ne: "" } }
           : { pathFile: { $not: { $ne: "" } } }
         : {},
-    ];
-  }
-
-  const keyword = req.query.keyword;
-  if (keyword) {
-    filters.$or = [
-      { name: { $regex: keyword, $options: "i" } },
-      { userName: { $regex: keyword, $options: "i" } },
-      { phone: { $regex: keyword, $options: "i" } },
-      { identification: { $regex: keyword, $options: "i" } },
-      { statusCode: { $regex: keyword, $options: "i" } },
-      { status: { $regex: keyword, $options: "i" } },
-      { codeSHB: { $regex: keyword, $options: "i" } },
-      { codeMAFC: { $regex: keyword, $options: "i" } },
-      { cnum: { $regex: keyword, $options: "i" } },
-      { dst: { $regex: keyword, $options: "i" } },
     ];
   }
 
