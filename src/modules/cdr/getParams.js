@@ -101,8 +101,6 @@ export const getParamsCDRMongo = (req) => {
       { identification: { $regex: keyword, $options: "i" } },
       { statusCode: { $regex: keyword, $options: "i" } },
       { status: { $regex: keyword, $options: "i" } },
-      { codeSHB: { $regex: keyword, $options: "i" } },
-      { codeMAFC: { $regex: keyword, $options: "i" } },
       { cnum: { $regex: keyword, $options: "i" } },
       { dst: { $regex: keyword, $options: "i" } },
     ];

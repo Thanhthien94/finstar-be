@@ -225,7 +225,51 @@ const updateCDR = async () => {
   }
 };
 
+const checkDuplicate = async () => {
+  try {
+    const data = await CDRModel.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(
+              new Date().getTime() - 30 * 24 * 60 * 60 * 1000
+            ),
+          }
+        }
+      },
+    
+      {
+        $group: {
+          _id: { 
+            billsec: "$billsec",
+            cnum: "$cnum" ,
+            dst: "$dst" ,
+            createdAt: "$createdAt" ,
+          },
+          ids: { $push: "$_id" },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $match: {
+          count: { $gt: 1 }          // lọc những nhóm có nhiều hơn 1 bản ghi
+        }
+      }
+    ])
+    data.forEach( async doc => {
+      // giữ lại một bản ghi, xóa các bản ghi khác
+      await CDRModel.deleteMany({
+        _id: { $in: doc.ids.slice(1) }               // xóa các bản ghi trừ bản đầu tiên
+      });
+    });
+    console.log('data check duplicate length: ', data.length)
+  } catch (error) {
+    console.log({ error });
+  }
+};
+
 setInterval(updateCDR, 1 * 60 * 1000);
+setInterval(checkDuplicate, 24 * 60 * 60 * 1000);
 
 const migrateCDR = async (req, res) => {
   try {

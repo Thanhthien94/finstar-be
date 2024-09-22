@@ -225,6 +225,53 @@ const fetchTalkTime = async (req, res) => {
     res.status(400).json({ success: false, message: "Can not get list" });
   }
 };
+const check = async (req, res) => {
+  try {
+    const data = await CDRModel.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(
+              new Date("2024-09-01").getTime()
+            ),
+          }
+        }
+      },
+    
+      {
+        $group: {
+          _id: { 
+            billsec: "$billsec", 
+            dst: "$dst" ,
+            createdAt: "$createdAt" ,
+          },
+          ids: { $push: "$_id" },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $match: {
+          count: { $gt: 1 }          // lọc những nhóm có nhiều hơn 1 bản ghi
+        }
+      }
+    ])
+    // data.forEach( async doc => {
+    //   // giữ lại một bản ghi, xóa các bản ghi khác
+    //   await CDRModel.deleteMany({
+    //     _id: { $in: doc.ids.slice(1) }               // xóa các bản ghi trừ bản đầu tiên
+    //   });
+    // });
+    console.log('length: ', data.length)
+    res.status(200).json({
+      success: true,
+      message: "get list cdr successful",
+      data,
+    });
+  } catch (error) {
+    console.log({ error });
+    res.status(400).json({ success: false, message: "Can not get list" });
+  }
+};
 
 const migrateCDR = async (req, res) => {
   try {
@@ -1244,4 +1291,5 @@ export default {
   aggregateRankedByTimeFrame,
   migrateCDR,
   fetchCDRMongo,
+  check,
 };
