@@ -179,6 +179,8 @@ export const getParams = (req) => {
     filters.$or = [
       { name: { $regex: keyword, $options: "i" } },
       { username: { $regex: keyword, $options: "i" } },
+      { firstname: { $regex: keyword, $options: "i" } },
+      { lastname: { $regex: keyword, $options: "i" } },
       { phone: { $regex: keyword, $options: "i" } },
       { identification: { $regex: keyword, $options: "i" } },
       { statusCode: { $regex: keyword, $options: "i" } },

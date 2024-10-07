@@ -699,8 +699,12 @@ const getBillInfo = async (req, res) => {
     const user = await UserModel.findById(_id);
     const filter = {};
     const { company, gteDate } = req.query;
+    console.log('role: ', role);
+    if (!role.includes("root")) console.log('is root******')
     if (!role.includes("root")) filter.company = user?.company;
     if (company) filter.company = company;
+    console.log('filter: ', filter);
+    console.log('filters: ', filters);
 
     let deposit = await BillModel.find(
       { $and: [filter, { type: "deposit" }] },
@@ -771,7 +775,7 @@ const getBillInfo = async (req, res) => {
     const analysBillCDRByCompany = await CDRModel.aggregate([
       {
         $match: {
-          $and: [{ disposition: "ANSWERED" }, filter, filters], // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
+          $and: [{ disposition: "ANSWERED" }, filters], // Lọc các tài liệu có 'disposition' bằng 'ANSWERED'
         },
       },
       {
