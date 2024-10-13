@@ -78,8 +78,8 @@ const createUser = async (req, res) => {
       .populate("sipAccount")
       .lean()
       .exec();
-      const { _id, ...rest } = dataUpdate;
-      await createDocument("finstar", "users", _id, rest);
+    const { _id, ...rest } = dataUpdate;
+    await createDocument("finstar", "users", _id, rest);
     res
       .status(200)
       .json({ success: true, message: "User is created", data: newUser });
@@ -136,14 +136,21 @@ const getListUsers = async (req, res) => {
   try {
     const { role, _id } = req.decode;
     let filter = {};
-    const {
+    let {
       status,
       company,
       role: roleFilter,
       keyword,
       limit,
       page,
+      sort,
     } = req.query;
+    const user = await UserModel.findById(_id);
+    console.log("user: ", user);
+    if (!role.includes("root")) {
+      company = user?.company;
+      filter = { company: user.company };
+    }
     const searchUser = async (keyword) => {
       const body = {
         query: {
@@ -152,57 +159,77 @@ const getListUsers = async (req, res) => {
           },
         },
       };
-      const searchQuery = {
-        bool: {
-          should: [
-            {
-              match: {
-                firstname: {
-                  query: keyword,
-                  // analyzer: "my_analyzer_2",
+      if (keyword) {
+        const searchQuery = {
+          bool: {
+            should: [
+              {
+                match: {
+                  firstname: {
+                    query: keyword,
+                    analyzer: "my_analyzer",
+                  },
                 },
               },
-            },
-            {
-              match: {
-                lastname: {
-                  query: keyword,
-                  // analyzer: "my_analyzer_2",
+              {
+                match: {
+                  firstname: {
+                    query: keyword,
+                    // analyzer: "my_analyzer_2",
+                  },
                 },
               },
-            },
-            {
-              match: {
-                username: {
-                  query: keyword,
-                  // analyzer: "my_analyzer_2",
+              {
+                match: {
+                  lastname: {
+                    query: keyword,
+                    // analyzer: "my_analyzer_2",
+                  },
                 },
               },
-            },
-            {
-              match: {
-                "sipAccount.extension": {
-                  query: keyword,
-                  // analyzer: "my_analyzer_2",
+              {
+                match: {
+                  username: {
+                    query: keyword,
+                    // analyzer: "my_analyzer_2",
+                  },
                 },
               },
-            },
-            {
-              match: {
-                "company.name": {
-                  query: keyword,
-                  // analyzer: "my_analyzer_2",
+              {
+                match: {
+                  "sipAccount.extension": {
+                    query: keyword,
+                    // analyzer: "my_analyzer_2",
+                  },
                 },
               },
-            },
-          ],
-          minimum_should_match: 1,
-        },
-      };
+              {
+                match: {
+                  "company.name": {
+                    query: keyword,
+                    // analyzer: "my_analyzer_2",
+                  },
+                },
+              },
+            ],
+            minimum_should_match: 1,
+          },
+        };
+        body.query.bool.must.push(searchQuery);
+      } else {
+        const searchQuery = {
+          bool: {
+            should: [{ match_all: {} }],
+          },
+        };
+        body.query.bool.must.push(searchQuery);
+      }
       if (status) body.query.bool.must.push({ term: { status } });
+      if (company)
+        body.query.bool.must.push({ term: { "company._id": company } });
       if (limit) body.size = limit;
       if (page) body.from = (page - 1) * (limit || 10);
-      body.query.bool.must.push(searchQuery);
+      if (!sort) body.sort = [{ createdAt: "asc" }];
       const result = await elastic.search({
         index: "finstar",
         body,
@@ -211,53 +238,51 @@ const getListUsers = async (req, res) => {
       return result;
     };
 
-    if (keyword) {
-      const result = await searchUser(keyword);
-      const users = get(result, "body.hits.hits", []).map((item) => {
-        // eslint-disable-next-line no-unused-vars
-        const { refreshToken, password, request, ...rest } = item._source;
-        return { ...rest };
-      });
-      const count = users.length;
-      const total = get(result, "body.hits.total.value", []);
-      return res.status(200).json({
-        success: true,
-        message: "Get list is successful",
-        data: { total, count, users },
-      });
-    }
-
-    const user = await UserModel.findById(_id);
-    console.log("user: ", user);
-    if (!role.includes("root")) filter = { company: user.company };
-    if (!role.includes("root") && !role.includes("admin"))
-      filter = { ...filter, usersTag: _id };
-    const { filters, options } = getParams(req);
-    let filterPlus = {};
-    const users = await UserModel.find(
-      { $and: [filters, filter] },
-      null,
-      options
-    )
-      .populate("company")
-      .populate("usersTag")
-      .populate("role")
-      .populate("sipAccount")
-      .lean()
-      .exec();
-
-    /** Insert users to elasticsearch */
-    // users.map(async (obj) => {
-    //   const { _id, ...rest } = obj;
-    //   await createDocument("finstar", "users", _id, rest);
-    // });
-    const total = await UserModel.countDocuments(filterPlus);
+    const result = await searchUser(keyword);
+    const users = get(result, "body.hits.hits", []).map((item) => {
+      // eslint-disable-next-line no-unused-vars
+      const { refreshToken, password, request, ...rest } = item._source;
+      return { ...rest };
+    });
     const count = users.length;
-    res.status(200).json({
+    const total = get(result, "body.hits.total.value", []);
+    return res.status(200).json({
       success: true,
       message: "Get list is successful",
       data: { total, count, users },
     });
+
+    // const user = await UserModel.findById(_id);
+    // console.log("user: ", user);
+    // if (!role.includes("root")) filter = { company: user.company };
+    // if (!role.includes("root") && !role.includes("admin"))
+    //   filter = { ...filter, usersTag: _id };
+    // const { filters, options } = getParams(req);
+    // let filterPlus = {};
+    // const users = await UserModel.find(
+    //   { $and: [filters, filter] },
+    //   null,
+    //   options
+    // )
+    //   .populate("company")
+    //   .populate("usersTag")
+    //   .populate("role")
+    //   .populate("sipAccount")
+    //   .lean()
+    //   .exec();
+
+    // /** Insert users to elasticsearch */
+    // // users.map(async (obj) => {
+    // //   const { _id, ...rest } = obj;
+    // //   await createDocument("finstar", "users", _id, rest);
+    // // });
+    // const total = await UserModel.countDocuments(filterPlus);
+    // const count = users.length;
+    // res.status(200).json({
+    //   success: true,
+    //   message: "Get list is successful",
+    //   data: { total, count, users },
+    // });
   } catch (error) {
     console.log({ error });
     res.status(400).json({ success: false, message: error.message });
