@@ -55,3 +55,8 @@ export const AMI_WORKER_HOST = process.env.AMI_WORKER_HOST || "";
  // AMI WORKER
 export const C2C_WORKER_PORT = process.env.C2C_WORKER_PORT || "3007";
 export const C2C_WORKER_HOST = process.env.C2C_WORKER_HOST || "";
+
+// Elasticsearch
+export const ELASTIC_HOST = process.env.ELASTIC_HOST || "http://localhost:9200";
+export const ELASTIC_USER = process.env.ELASTIC_USER || "";
+export const ELASTIC_PASSWORD = process.env.ELASTIC_PASSWORD || "";

@@ -36,6 +36,7 @@
   "dependencies": {
     "bluebird": "^3.7.2",
     "cloudinary": "^1.41.0",
+    "es7": "npm:@elastic/elasticsearch@7",
     "express": "^4.18.2",
     "express-actuator": "^1.8.4",
     "express-zip": "^3.0.0",

@@ -15,6 +15,13 @@ import argon2 from "argon2";
 import auth from "../../util/authentication/auth.js";
 import { exportExcel } from "../../util/excel/excel.js";
 import moment from "../../util/monent/moment.js";
+import elastic, {
+  createDocument,
+  updateDocument,
+} from "../../controllers/elasticsearch/index.js";
+import pkg from "lodash";
+
+const { get } = pkg;
 
 const { generateToken } = auth;
 const createUser = async (req, res) => {
@@ -64,6 +71,15 @@ const createUser = async (req, res) => {
       title,
     };
     const newUser = await UserModel.create(dataCreate);
+    const dataUpdate = UserModel.findById(newUser._id)
+      .populate("company")
+      .populate("usersTag")
+      .populate("role")
+      .populate("sipAccount")
+      .lean()
+      .exec();
+      const { _id, ...rest } = dataUpdate;
+      await createDocument("finstar", "users", _id, rest);
     res
       .status(200)
       .json({ success: true, message: "User is created", data: newUser });
@@ -107,12 +123,10 @@ const resetPassword = async (req, res) => {
       { username },
       { password: hashedPassword }
     );
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Reset successful - New password is 12345678",
-      });
+    res.status(200).json({
+      success: true,
+      message: "Reset successful - New password is 12345678",
+    });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -122,9 +136,102 @@ const getListUsers = async (req, res) => {
   try {
     const { role, _id } = req.decode;
     let filter = {};
+    const {
+      status,
+      company,
+      role: roleFilter,
+      keyword,
+      limit,
+      page,
+    } = req.query;
+    const searchUser = async (keyword) => {
+      const body = {
+        query: {
+          bool: {
+            must: [],
+          },
+        },
+      };
+      const searchQuery = {
+        bool: {
+          should: [
+            {
+              match: {
+                firstname: {
+                  query: keyword,
+                  // analyzer: "my_analyzer_2",
+                },
+              },
+            },
+            {
+              match: {
+                lastname: {
+                  query: keyword,
+                  // analyzer: "my_analyzer_2",
+                },
+              },
+            },
+            {
+              match: {
+                username: {
+                  query: keyword,
+                  // analyzer: "my_analyzer_2",
+                },
+              },
+            },
+            {
+              match: {
+                "sipAccount.extension": {
+                  query: keyword,
+                  // analyzer: "my_analyzer_2",
+                },
+              },
+            },
+            {
+              match: {
+                "company.name": {
+                  query: keyword,
+                  // analyzer: "my_analyzer_2",
+                },
+              },
+            },
+          ],
+          minimum_should_match: 1,
+        },
+      };
+      if (status) body.query.bool.must.push({ term: { status } });
+      if (limit) body.size = limit;
+      if (page) body.from = (page - 1) * (limit || 10);
+      body.query.bool.must.push(searchQuery);
+      const result = await elastic.search({
+        index: "finstar",
+        body,
+      });
+      console.log("result: ", JSON.stringify(body));
+      return result;
+    };
+
+    if (keyword) {
+      const result = await searchUser(keyword);
+      const users = get(result, "body.hits.hits", []).map((item) => {
+        // eslint-disable-next-line no-unused-vars
+        const { refreshToken, password, request, ...rest } = item._source;
+        return { ...rest };
+      });
+      const count = users.length;
+      const total = get(result, "body.hits.total.value", []);
+      return res.status(200).json({
+        success: true,
+        message: "Get list is successful",
+        data: { total, count, users },
+      });
+    }
+
     const user = await UserModel.findById(_id);
+    console.log("user: ", user);
     if (!role.includes("root")) filter = { company: user.company };
-    if (!role.includes("root") && !role.includes("admin")) filter = { ...filter, usersTag: _id };
+    if (!role.includes("root") && !role.includes("admin"))
+      filter = { ...filter, usersTag: _id };
     const { filters, options } = getParams(req);
     let filterPlus = {};
     const users = await UserModel.find(
@@ -135,8 +242,15 @@ const getListUsers = async (req, res) => {
       .populate("company")
       .populate("usersTag")
       .populate("role")
-      .populate("sipAccount");
-    // console.log("user: ", users);
+      .populate("sipAccount")
+      .lean()
+      .exec();
+
+    /** Insert users to elasticsearch */
+    // users.map(async (obj) => {
+    //   const { _id, ...rest } = obj;
+    //   await createDocument("finstar", "users", _id, rest);
+    // });
     const total = await UserModel.countDocuments(filterPlus);
     const count = users.length;
     res.status(200).json({
@@ -210,7 +324,7 @@ const updateUser = async (req, res) => {
 
         return tags;
       };
-      
+
       const allTags = await getAllTags(user);
       newTags.forEach(allTags.add, allTags);
 
@@ -236,13 +350,15 @@ const updateUser = async (req, res) => {
       });
     }
     if (status === "Locked") {
-      await UserModel.findOneAndUpdate(
+      const update = await UserModel.findOneAndUpdate(
         { username },
-        { status, refreshToken: null }
+        { status, refreshToken: null },
+        { new: true }
       );
+      await updateDocument("finstar", update);
     } else if (findUser && usersTag.length) {
       updateUserTags(findUser._id, usersTag);
-      await UserModel.findOneAndUpdate(
+      const update = await UserModel.findOneAndUpdate(
         { username },
         {
           firstname,
@@ -256,10 +372,12 @@ const updateUser = async (req, res) => {
           type,
           title,
           sipAccount,
-        }
+        },
+        { new: true }
       );
+      await updateDocument("finstar", update);
     } else {
-      await UserModel.findOneAndUpdate(
+      const update = await UserModel.findOneAndUpdate(
         { username },
         {
           firstname,
@@ -274,8 +392,10 @@ const updateUser = async (req, res) => {
           title,
           sipAccount,
           usersTag: [],
-        }
+        },
+        { new: true }
       );
+      await updateDocument("finstar", update);
     }
     res
       .status(200)
@@ -699,12 +819,12 @@ const getBillInfo = async (req, res) => {
     const user = await UserModel.findById(_id);
     const filter = {};
     const { company, gteDate } = req.query;
-    console.log('role: ', role);
-    if (!role.includes("root")) console.log('is root******')
+    console.log("role: ", role);
+    if (!role.includes("root")) console.log("is root******");
     if (!role.includes("root")) filter.company = user?.company;
     if (company) filter.company = company;
-    console.log('filter: ', filter);
-    console.log('filters: ', filters);
+    console.log("filter: ", filter);
+    console.log("filters: ", filters);
 
     let deposit = await BillModel.find(
       { $and: [filter, { type: "deposit" }] },
@@ -901,11 +1021,15 @@ const getBillInfo = async (req, res) => {
           totalBill2:
             item.totalBill2 + totalBill - (totalDeposit - findDeposit.price) < 0
               ? 0
-              : item.totalBill2 + totalBill - (totalDeposit - findDeposit.price),
+              : item.totalBill2 +
+                totalBill -
+                (totalDeposit - findDeposit.price),
           totalBill3:
             item.totalBill3 + totalBill - (totalDeposit - findDeposit.price) < 0
               ? 0
-              : item.totalBill3 + totalBill - (totalDeposit - findDeposit.price),
+              : item.totalBill3 +
+                totalBill -
+                (totalDeposit - findDeposit.price),
           surplus: totalDeposit - (item.totalBill + totalBill),
           surplus2: totalDeposit - (item.totalBill2 + totalBill),
           surplus3: totalDeposit - (item.totalBill3 + totalBill),
