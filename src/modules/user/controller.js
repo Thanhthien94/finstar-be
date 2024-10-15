@@ -71,7 +71,7 @@ const createUser = async (req, res) => {
       title,
     };
     const newUser = await UserModel.create(dataCreate);
-    const dataUpdate = UserModel.findById(newUser._id)
+    const dataUpdate = UserModel.findOne(newUser.username)
       .populate("company")
       .populate("usersTag")
       .populate("role")
