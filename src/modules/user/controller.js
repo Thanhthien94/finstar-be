@@ -312,6 +312,7 @@ const updateUser = async (req, res) => {
     if (!rolePermit.includes("root") && !rolePermit.includes("admin"))
       throw new Error("User is not access");
     const data = req.body;
+    console.log('param: ', data);
     let {
       username,
       firstname,
@@ -361,26 +362,37 @@ const updateUser = async (req, res) => {
     };
 
     if (!sipAccount) {
-      await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
+      const update = await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
         user: null,
         usersTag: null,
         company: null,
-      });
+      }, {new: true}).lean().exec();
+      const dataElasticUpdate = {extension: update}
+      const id = findUser._id;
+      console.log('id: ', id);
+      await updateDocument("finstar", findUser._id, dataElasticUpdate);
     }
     if (sipAccount) {
-      await SipModel.findByIdAndUpdate(sipAccount, {
+      const update = await SipModel.findByIdAndUpdate(sipAccount, {
         user: findUser._id,
         usersTag: usersTag || findUser.usersTag,
         company: company || findUser.company,
-      });
+      },{new: true}).lean().exec();
+      console.log('update SIP account: ', update);
+      const dataElasticUpdate = {sipAccount: update}
+      const id = findUser._id;
+      console.log('id: ', id);
+      await updateDocument("finstar", id, dataElasticUpdate);
     }
     if (status === "Locked") {
       const update = await UserModel.findOneAndUpdate(
         { username },
         { status, refreshToken: null },
         { new: true }
-      );
-      await updateDocument("finstar", update);
+      ).lean().exec();
+      console.log('update status: ', update);
+      const { _id, ...rest } = update;
+      await updateDocument("finstar", _id, {status});
     } else if (findUser && usersTag.length) {
       updateUserTags(findUser._id, usersTag);
       const update = await UserModel.findOneAndUpdate(
@@ -399,8 +411,10 @@ const updateUser = async (req, res) => {
           sipAccount,
         },
         { new: true }
-      );
-      await updateDocument("finstar", update);
+      ).populate("usersTag").populate("role").populate("sipAccount").populate("company").lean().exec();
+      const { _id, ...rest } = update;
+      console.log('update status: ', update);
+      await updateDocument("finstar", _id, rest);
     } else {
       const update = await UserModel.findOneAndUpdate(
         { username },
@@ -419,8 +433,10 @@ const updateUser = async (req, res) => {
           usersTag: [],
         },
         { new: true }
-      );
-      await updateDocument("finstar", update);
+      ).populate("usersTag").populate("role").populate("sipAccount").populate("company").lean().exec();
+      console.log('update status: ', update);
+      const { _id, ...rest } = update;
+      await updateDocument("finstar", _id, rest);
     }
     res
       .status(200)

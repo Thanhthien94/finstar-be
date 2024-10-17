@@ -35,7 +35,7 @@ elastic.ping({}, (err, result) => {
 export async function createDocument(index, model, id, body) {
   try {
     const response = await elastic.index({
-      index: index, // Tên của index
+      index, // Tên của index
       id,
       body: {model, ...body},
     });
@@ -45,12 +45,14 @@ export async function createDocument(index, model, id, body) {
     console.error("Error creating document:", error);
   }
 }
-export async function updateDocument(index, body) {
+export async function updateDocument(index, id, body) {
   try {
     const response = await elastic.update({
-      index: index,
-      id: body._id,
-      body,
+      index,
+      id,
+      body:{
+        doc: body
+      },
     });
 
     console.log("Document updated:", response);
