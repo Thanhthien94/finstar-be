@@ -551,10 +551,12 @@ const getRuleIptables = (req, res) => {
         console.error(`exec error: ${error}`);
         return res.status(500).send(`Error: ${stderr}`);
       }
+      // Chuyển kết quả stdout thành mảng với mỗi dòng là một phần tử
+      const resultArray = stdout.split('\n').filter(line => line.trim() !== '');
       res.status(200).json({
         success: true,
         message: "get rule successful",
-        data: `<pre>${stdout}</pre>`,
+        data: resultArray,
       });
     });
   } catch (error) {
@@ -568,7 +570,7 @@ const addBlackList = (req, res) => {
     const { ip } = req.body;
     if (!ip) throw new Error("IP is required");
 
-    const command = `iptables -A BLACKLIST -s ${ip} -j DROP`;
+    const command = `iptables -A BLACKLIST -s ${ip} -j DROP \n sudo sh -c "iptables-save > /etc/sysconfig/iptables"`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
