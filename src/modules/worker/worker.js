@@ -652,7 +652,7 @@ const removeRule = (req, res) => {
 };
 
 const removeRuleIptables = (req, res) => {
-  const lineNumber = req.params.lineNumber; // Lấy số dòng từ request params
+  const lineNumber = req.body.lineNumber; // Lấy số dòng từ request params
   if (!lineNumber) {
     return res.status(400).json({ success: false, message: "Line number is required" });
   }
