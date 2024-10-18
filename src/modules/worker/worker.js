@@ -545,7 +545,7 @@ const fetchCDRToDownload = async (req, res) => {
 
 const getRuleIptables = (req, res) => {
   try {
-    const command = `iptables -L -v -n --line-numbers | grep 'DROP'`;
+    const command = `iptables -L BLACKLIST -v -n --line-numbers`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
@@ -611,10 +611,10 @@ const removeRule = (req, res) => {
           // Tách chuỗi để lấy số dòng và tên chuỗi
           const parts = line.trim().split(/\s+/);
           const lineNumber = parts[0];
-          const chainName = parts[3];
+          // const chainName = parts[3];
 
           // Tạo lệnh để xóa quy tắc
-          const deleteRuleCmd = `iptables -D ${chainName} ${lineNumber}`;
+          const deleteRuleCmd = `iptables -D BLACKLIST ${lineNumber}`;
           commands.push(deleteRuleCmd);
         }
       });
