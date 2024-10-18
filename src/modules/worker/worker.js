@@ -651,6 +651,30 @@ const removeRule = (req, res) => {
   }
 };
 
+const removeRuleIptables = (req, res) => {
+  const lineNumber = req.params.lineNumber; // Lấy số dòng từ request params
+  if (!lineNumber) {
+    return res.status(400).json({ success: false, message: "Line number is required" });
+  }
+
+  try {
+    const command = `iptables -D INPUT ${lineNumber}`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return res.status(500).json({ success: false, message: `Error: ${stderr}` });
+      }
+      res.status(200).json({
+        success: true,
+        message: `Rule at line ${lineNumber} removed successfully`,
+      });
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const restartPBX = (req, res) => {
   try {
 
@@ -677,5 +701,6 @@ export default {
   getRuleIptables,
   addBlackList,
   removeRule,
+  removeRuleIptables,
   restartPBX,
 };
