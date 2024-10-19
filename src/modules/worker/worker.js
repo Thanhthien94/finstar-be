@@ -581,7 +581,7 @@ const addBlackList = (req, res) => {
     const { ip } = req.body;
     if (!ip) throw new Error("IP is required");
 
-    const command = `iptables -A BLACKLIST -s ${ip} -j DROP \n sudo sh -c "iptables-save > /etc/sysconfig/iptables"`;
+    const command = `iptables -A BLACKLIST -s ${ip} -j DROP \n sh -c "iptables-save > /etc/sysconfig/iptables"`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
