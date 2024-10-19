@@ -653,7 +653,11 @@ const removeRule = (req, res) => {
       }
 
       executeCommandsSequentially(commands, 0, () => {
-        res.send(`IP ${ip} removed from all iptables rules`);
+        res.status(200).json({
+          success: true,
+          message: `IP ${ip} removed from all iptables rules`,
+          data: {},
+        });
       });
     });
   } catch (error) {
