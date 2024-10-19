@@ -581,16 +581,41 @@ const addBlackList = (req, res) => {
     const { ip } = req.body;
     if (!ip) throw new Error("IP is required");
 
-    const command = `iptables -A BLACKLIST -s ${ip} -j DROP \n sh -c "iptables-save > /etc/sysconfig/iptables"`;
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`exec error: ${error}`);
-        return res.status(500).send(`Error: ${stderr}`);
+    // Lệnh kiểm tra các rule hiện có trong BLACKLIST
+    const checkCommand = `iptables -L BLACKLIST -v -n --line-numbers`;
+
+    exec(checkCommand, (checkError, checkStdout, checkStderr) => {
+      if (checkError) {
+        console.error(`Check exec error: ${checkError}`);
+        return res.status(500).send(`Error: ${checkStderr}`);
       }
-      res.status(200).json({
-        success: true,
-        message: `IP ${ip} has been blacklisted`,
-        data: {},
+
+      // Lọc và tìm xem IP đã tồn tại trong BLACKLIST hay chưa
+      const ipExists = checkStdout
+        .split('\n') // Tách kết quả ra thành từng dòng
+        .filter(line => line.includes('DROP')) // Chỉ giữ lại các dòng có chứa 'DROP'
+        .some(line => line.includes(ip)); // Kiểm tra xem IP có trong dòng không
+
+      if (ipExists) {
+        return res.status(400).json({
+          success: false,
+          message: `IP ${ip} is already blacklisted`,
+        });
+      }
+
+      // Nếu IP chưa tồn tại, thêm vào blacklist
+      const addCommand = `iptables -A BLACKLIST -s ${ip} -j DROP && iptables-save > /etc/sysconfig/iptables`;
+      exec(addCommand, (addError, addStdout, addStderr) => {
+        if (addError) {
+          console.error(`Add exec error: ${addError}`);
+          return res.status(500).send(`Error: ${addStderr}`);
+        }
+
+        res.status(200).json({
+          success: true,
+          message: `IP ${ip} has been blacklisted`,
+          data: {},
+        });
       });
     });
   } catch (error) {

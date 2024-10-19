@@ -242,7 +242,7 @@ const getListUsers = async (req, res) => {
     const users = get(result, "body.hits.hits", []).map((item) => {
       // eslint-disable-next-line no-unused-vars
       const { refreshToken, password, request, ...rest } = item._source;
-      return { ...rest };
+      return { ...rest, _id: item._id };
     });
     const count = users.length;
     const total = get(result, "body.hits.total.value", []);
