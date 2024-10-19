@@ -551,12 +551,23 @@ const getRuleIptables = (req, res) => {
         console.error(`exec error: ${error}`);
         return res.status(500).send(`Error: ${stderr}`);
       }
-      // Chuyển kết quả stdout thành mảng với mỗi dòng là một phần tử
-      const resultArray = stdout.split('\n').filter(line => line.trim() !== '');
+
+      // Chuyển đổi stdout thành mảng các dòng và lọc các địa chỉ IP
+      const ipList = stdout
+        .split('\n') // Tách mỗi dòng thành một phần tử
+        .filter(line => line.includes('DROP')) // Chỉ giữ lại các dòng chứa 'DROP'
+        .map(line => {
+          // Sử dụng regex để tìm IP trong dòng
+          const match = line.match(/\d+\.\d+\.\d+\.\d+/); // Tìm địa chỉ IP (IPv4)
+          return match ? match[0] : null;
+        })
+        .filter(ip => ip); // Loại bỏ các giá trị null
+
+      // Trả kết quả là mảng các IP
       res.status(200).json({
         success: true,
         message: "get rule successful",
-        data: resultArray,
+        data: ipList,
       });
     });
   } catch (error) {
