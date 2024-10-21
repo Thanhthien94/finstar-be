@@ -71,7 +71,7 @@ const createUser = async (req, res) => {
       title,
     };
     const newUser = await UserModel.create(dataCreate);
-    const dataUpdate = UserModel.findOne(newUser.username)
+    const dataUpdate = await UserModel.findOne(newUser.username)
       .populate("company")
       .populate("usersTag")
       .populate("role")
@@ -312,7 +312,7 @@ const updateUser = async (req, res) => {
     if (!rolePermit.includes("root") && !rolePermit.includes("admin"))
       throw new Error("User is not access");
     const data = req.body;
-    console.log('param: ', data);
+    console.log("param: ", data);
     let {
       username,
       firstname,
@@ -362,26 +362,38 @@ const updateUser = async (req, res) => {
     };
 
     if (!sipAccount) {
-      const update = await SipModel.findByIdAndUpdate(findUser?.sipAccount, {
-        user: null,
-        usersTag: null,
-        company: null,
-      }, {new: true}).lean().exec();
-      const dataElasticUpdate = {extension: update}
+      const update = await SipModel.findByIdAndUpdate(
+        findUser?.sipAccount,
+        {
+          user: null,
+          usersTag: null,
+          company: null,
+        },
+        { new: true }
+      )
+        .lean()
+        .exec();
+      const dataElasticUpdate = { extension: update };
       const id = findUser._id;
-      console.log('id: ', id);
+      console.log("id: ", id);
       await updateDocument("finstar", findUser._id, dataElasticUpdate);
     }
     if (sipAccount) {
-      const update = await SipModel.findByIdAndUpdate(sipAccount, {
-        user: findUser._id,
-        usersTag: usersTag || findUser.usersTag,
-        company: company || findUser.company,
-      },{new: true}).lean().exec();
-      console.log('update SIP account: ', update);
-      const dataElasticUpdate = {sipAccount: update}
+      const update = await SipModel.findByIdAndUpdate(
+        sipAccount,
+        {
+          user: findUser._id,
+          usersTag: usersTag || findUser.usersTag,
+          company: company || findUser.company,
+        },
+        { new: true }
+      )
+        .lean()
+        .exec();
+      console.log("update SIP account: ", update);
+      const dataElasticUpdate = { sipAccount: update };
       const id = findUser._id;
-      console.log('id: ', id);
+      console.log("id: ", id);
       await updateDocument("finstar", id, dataElasticUpdate);
     }
     if (status === "Locked") {
@@ -389,10 +401,12 @@ const updateUser = async (req, res) => {
         { username },
         { status, refreshToken: null },
         { new: true }
-      ).lean().exec();
-      console.log('update status: ', update);
+      )
+        .lean()
+        .exec();
+      console.log("update status: ", update);
       const { _id, ...rest } = update;
-      await updateDocument("finstar", _id, {status});
+      await updateDocument("finstar", _id, { status });
     } else if (findUser && usersTag.length) {
       updateUserTags(findUser._id, usersTag);
       const update = await UserModel.findOneAndUpdate(
@@ -411,9 +425,15 @@ const updateUser = async (req, res) => {
           sipAccount,
         },
         { new: true }
-      ).populate("usersTag").populate("role").populate("sipAccount").populate("company").lean().exec();
+      )
+        .populate("usersTag")
+        .populate("role")
+        .populate("sipAccount")
+        .populate("company")
+        .lean()
+        .exec();
       const { _id, ...rest } = update;
-      console.log('update status: ', update);
+      console.log("update status: ", update);
       await updateDocument("finstar", _id, rest);
     } else {
       const update = await UserModel.findOneAndUpdate(
@@ -433,8 +453,14 @@ const updateUser = async (req, res) => {
           usersTag: [],
         },
         { new: true }
-      ).populate("usersTag").populate("role").populate("sipAccount").populate("company").lean().exec();
-      console.log('update status: ', update);
+      )
+        .populate("usersTag")
+        .populate("role")
+        .populate("sipAccount")
+        .populate("company")
+        .lean()
+        .exec();
+      console.log("update status: ", update);
       const { _id, ...rest } = update;
       await updateDocument("finstar", _id, rest);
     }
@@ -1300,8 +1326,8 @@ const impersonate = async (req, res) => {
 const updateAllUsers = async (req, res) => {
   try {
     const role = req.decode.role;
-    const action = req.body.action;
-    if (role === "root" && action === "all") {
+    const { action, reIndex } = req.body;
+    if (role.includes("root") && action) {
       // const users = await UserModel.find({request: { $exists: false }}).lean().exec();
       const users = await UserModel.find().lean().exec();
       // const total = users.length;
@@ -1338,6 +1364,24 @@ const updateAllUsers = async (req, res) => {
         success: true,
         message: "all users is updated",
         data: { total },
+      });
+    } else if (role.includes("root") && reIndex) {
+      const users = await UserModel.find()
+        .populate("company")
+        .populate("usersTag")
+        .populate("role")
+        .populate("sipAccount")
+        .lean()
+        .exec();
+      /** Insert users to elasticsearch */
+      users.map(async (obj) => {
+        const { _id, ...rest } = obj;
+        await createDocument("finstar", "users", _id, rest);
+      });
+      res.json({
+        success: true,
+        message: "all users is reIndexed",
+        data: {},
       });
     } else {
       throw new Error("update failed");
