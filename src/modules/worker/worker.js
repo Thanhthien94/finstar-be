@@ -268,10 +268,9 @@ const checkDuplicate = async () => {
   }
 };
 
-setInterval(checkDuplicate, 2 * 60 * 1000);
+setInterval(checkDuplicate, 30 * 60 * 1000);
 
 setInterval(updateCDR, 1 * 60 * 1000);
-setInterval(checkDuplicate, 24 * 60 * 60 * 1000);
 
 const migrateCDR = async (req, res) => {
   try {
