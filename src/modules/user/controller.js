@@ -24,6 +24,11 @@ import pkg from "lodash";
 const { get } = pkg;
 
 const { generateToken } = auth;
+
+const validateEmail = (email) => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+}
 const createUser = async (req, res) => {
   let {
     username,
@@ -50,10 +55,11 @@ const createUser = async (req, res) => {
     if (!rolePermit.includes("root")) throw new Error("User is not access");
     const user = await UserModel.findOne({ username });
     if (user) {
-      throw new Error("User already exists");
+      throw new Error("Người dùng đã tồn tại");
     }
     //All good
     const hashedPassword = await argon2.hash(password);
+    
 
     // console.log({hashedPassword})
     const dataCreate = {
@@ -70,8 +76,10 @@ const createUser = async (req, res) => {
       type,
       title,
     };
+
+    if (!validateEmail(username)) throw new Error("Email không đúng định dạng");
     const newUser = await UserModel.create(dataCreate);
-    const dataUpdate = await UserModel.findOne(newUser.username)
+    const dataUpdate = await UserModel.findOne({username: newUser.username})
       .populate("company")
       .populate("usersTag")
       .populate("role")
@@ -82,7 +90,7 @@ const createUser = async (req, res) => {
     await createDocument("finstar", "users", _id, rest);
     res
       .status(200)
-      .json({ success: true, message: "User is created", data: newUser });
+      .json({ success: true, message: "Tạo người dùng thành công", data: newUser });
   } catch (error) {
     console.log(error);
     res.status(400).json({ success: false, message: error.message });
@@ -95,11 +103,11 @@ const changePassword = async (req, res) => {
     const { newPassword } = req.body;
     const user = await UserModel.findById(id);
     if (!user) {
-      throw new Error("user not found");
+      throw new Error("Người dùng không tồn tại");
     }
     const hashedPassword = await argon2.hash(newPassword);
     await UserModel.findByIdAndUpdate(id, { password: hashedPassword });
-    res.status(200).json({ success: true, message: "New password is changed" });
+    res.status(200).json({ success: true, message: "Đổi mật khẩu mới thành công" });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -116,7 +124,7 @@ const resetPassword = async (req, res) => {
     const newPassword = "12345678";
     const user = await UserModel.findOne({ username });
     if (!user) {
-      throw new Error("user not found");
+      throw new Error("Người dùng không tồn tại");
     }
     const hashedPassword = await argon2.hash(newPassword);
     await UserModel.findOneAndUpdate(
@@ -125,7 +133,7 @@ const resetPassword = async (req, res) => {
     );
     res.status(200).json({
       success: true,
-      message: "Reset successful - New password is 12345678",
+      message: "Reset successful - Mật khẩu mới là 12345678",
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -466,7 +474,7 @@ const updateUser = async (req, res) => {
     }
     res
       .status(200)
-      .json({ success: true, message: "Update user is successful" });
+      .json({ success: true, message: "Cập nhật người dùng thành công" });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
     console.log(error);
