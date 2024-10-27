@@ -12,6 +12,10 @@ import {
 import { exec } from "child_process";
 import { DOMAIN } from "../../util/config/index.js";
 import { getParamsCDR } from "../cdr/getParams.js";
+import fs from "fs";
+
+const ASTERISK_CONFIG_PATH =
+    "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
 
 const updateCDR = async () => {
   try {
@@ -231,38 +235,36 @@ const checkDuplicate = async () => {
       {
         $match: {
           createdAt: {
-            $gte: new Date(
-              new Date().getTime() - 30 * 24 * 60 * 60 * 1000
-            ),
-          }
-        }
+            $gte: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000),
+          },
+        },
       },
-    
+
       {
         $group: {
-          _id: { 
+          _id: {
             billsec: "$billsec",
-            cnum: "$cnum" ,
-            dst: "$dst" ,
-            createdAt: "$createdAt" ,
+            cnum: "$cnum",
+            dst: "$dst",
+            createdAt: "$createdAt",
           },
           ids: { $push: "$_id" },
-          count: { $sum: 1 }
-        }
+          count: { $sum: 1 },
+        },
       },
       {
         $match: {
-          count: { $gt: 1 }          // lọc những nhóm có nhiều hơn 1 bản ghi
-        }
-      }
-    ])
-    data.forEach( async doc => {
+          count: { $gt: 1 }, // lọc những nhóm có nhiều hơn 1 bản ghi
+        },
+      },
+    ]);
+    data.forEach(async (doc) => {
       // giữ lại một bản ghi, xóa các bản ghi khác
       await CDRModel.deleteMany({
-        _id: { $in: doc.ids.slice(1) }               // xóa các bản ghi trừ bản đầu tiên
+        _id: { $in: doc.ids.slice(1) }, // xóa các bản ghi trừ bản đầu tiên
       });
     });
-    console.log('data check duplicate length: ', data.length)
+    console.log("data check duplicate length: ", data.length);
   } catch (error) {
     console.log({ error });
   }
@@ -555,14 +557,14 @@ const getRuleIptables = (req, res) => {
 
       // Chuyển đổi stdout thành mảng các dòng và lọc các địa chỉ IP
       const ipList = stdout
-        .split('\n') // Tách mỗi dòng thành một phần tử
-        .filter(line => line.includes('DROP')) // Chỉ giữ lại các dòng chứa 'DROP'
-        .map(line => {
+        .split("\n") // Tách mỗi dòng thành một phần tử
+        .filter((line) => line.includes("DROP")) // Chỉ giữ lại các dòng chứa 'DROP'
+        .map((line) => {
           // Sử dụng regex để tìm IP trong dòng
           const match = line.match(/\d+\.\d+\.\d+\.\d+/); // Tìm địa chỉ IP (IPv4)
           return match ? match[0] : null;
         })
-        .filter(ip => ip); // Loại bỏ các giá trị null
+        .filter((ip) => ip); // Loại bỏ các giá trị null
 
       // Trả kết quả là mảng các IP
       res.status(200).json({
@@ -593,9 +595,9 @@ const addBlackList = (req, res) => {
 
       // Lọc và tìm xem IP đã tồn tại trong BLACKLIST hay chưa
       const ipExists = checkStdout
-        .split('\n') // Tách kết quả ra thành từng dòng
-        .filter(line => line.includes('DROP')) // Chỉ giữ lại các dòng có chứa 'DROP'
-        .some(line => line.includes(ip)); // Kiểm tra xem IP có trong dòng không
+        .split("\n") // Tách kết quả ra thành từng dòng
+        .filter((line) => line.includes("DROP")) // Chỉ giữ lại các dòng có chứa 'DROP'
+        .some((line) => line.includes(ip)); // Kiểm tra xem IP có trong dòng không
 
       if (ipExists) {
         return res.status(400).json({
@@ -695,7 +697,9 @@ const removeRule = (req, res) => {
 const removeRuleIptables = (req, res) => {
   const lineNumber = req.body.lineNumber; // Lấy số dòng từ request params
   if (!lineNumber) {
-    return res.status(400).json({ success: false, message: "Line number is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Line number is required" });
   }
 
   try {
@@ -703,7 +707,9 @@ const removeRuleIptables = (req, res) => {
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
-        return res.status(500).json({ success: false, message: `Error: ${stderr}` });
+        return res
+          .status(500)
+          .json({ success: false, message: `Error: ${stderr}` });
       }
       res.status(200).json({
         success: true,
@@ -718,7 +724,6 @@ const removeRuleIptables = (req, res) => {
 
 const restartPBX = (req, res) => {
   try {
-
     const command = `docker restart izpbx`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
@@ -735,6 +740,74 @@ const restartPBX = (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+const updateRandomList = (req, res) => {
+  const { cidList } = req.body;
+
+  if (!cidList || !Array.isArray(cidList) || cidList.length === 0) {
+    return res
+      .status(400)
+      .json({
+        message: "CID list không hợp lệ. Vui lòng cung cấp mảng Caller ID.",
+      });
+  }
+
+  // Chuỗi CID_LIST mới
+  const newCidList = cidList.join("|");
+
+  try {
+    // Đọc nội dung file
+    const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
+
+    // Tìm và thay thế CID_LIST trong file
+    const updatedContent = fileContent.replace(
+      /(CID_LIST=)(.*)/,
+      `$1${newCidList}`
+    );
+
+    // Ghi lại nội dung file sau khi thay đổi
+    fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
+
+    res
+      .status(200)
+      .json({ message: "Cập nhật CID_LIST thành công!", CID_LIST: newCidList });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật CID_LIST:", error);
+    res
+      .status(500)
+      .json({
+        message: "Đã xảy ra lỗi khi cập nhật CID_LIST.",
+        error: error.message,
+      });
+  }
+};
+const getRandomList = (req, res) => {
+  try {
+    // Đọc nội dung file
+    const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
+
+    // Tìm kiếm CID_LIST trong file
+    const match = fileContent.match(/CID_LIST=(.*)/);
+    if (match && match[1]) {
+      const currentCidList = match[1].trim();
+      // Chia tách danh sách Caller ID thành mảng
+      const cidArray = currentCidList.split("|");
+      res.status(200).json({ success: true, message: "lấy danh sách thành công", data: cidArray });
+    } else {
+      res
+        .status(404)
+        .json({ message: "CID_LIST không tìm thấy trong file cấu hình." });
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy CID_LIST:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: error.message,
+        data: []
+      });
+  }
+};
 
 export default {
   fetchCDRToDownload,
@@ -744,4 +817,6 @@ export default {
   removeRule,
   removeRuleIptables,
   restartPBX,
+  updateRandomList,
+  getRandomList,
 };

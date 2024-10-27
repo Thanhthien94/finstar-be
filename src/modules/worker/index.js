@@ -10,5 +10,7 @@ Route.get('/iptables/rule', verifyToken, worker.getRuleIptables)
 Route.post('/iptables/blacklist', verifyToken, worker.addBlackList)
 Route.delete('/iptables/blacklist', verifyToken, worker.removeRule)
 Route.post('/pbx/restart', verifyToken, worker.restartPBX)
+Route.get('/pbx/random', verifyToken, worker.getRandomList)
+Route.post('/pbx/random', verifyToken, worker.updateRandomList)
 
 export default Route
