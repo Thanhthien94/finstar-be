@@ -769,7 +769,7 @@ const updateRandomList = (req, res) => {
 
     res
       .status(200)
-      .json({ message: "Cập nhật CID_LIST thành công!", CID_LIST: newCidList });
+      .json({ success: true, message: "Cập nhật CID_LIST thành công!", data: newCidList });
   } catch (error) {
     console.error("Lỗi khi cập nhật CID_LIST:", error);
     res
