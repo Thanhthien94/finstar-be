@@ -790,34 +790,35 @@ const updateRandomList = (req, res) => {
 };
 const getRandomList = (req, res) => {
   try {
-    // Đặt tên chuỗi
-    const { outboundName } = req.query;
-    const cidName = "CID_LIST_" + outboundName;
     // Đọc nội dung file
     const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
 
-    // Tìm kiếm CID_LIST trong file
-    const match = fileContent.match(new RegExp(`${cidName}=(.*)`));
-    if (match && match[1]) {
-      const currentCidList = match[1].trim();
-      // Chia tách danh sách Caller ID thành mảng
-      const cidArray = currentCidList.split("|");
+    // Sử dụng regex để tìm tất cả các dòng bắt đầu bằng CID_LIST_
+    const matches = [...fileContent.matchAll(/^CID_LIST_\w*=(.*)/gm)];
+
+    if (matches.length > 0) {
+      // Tạo object để lưu các danh sách CID_LIST tìm thấy
+      const cidLists = matches.reduce((acc, match) => {
+        const [fullMatch, cidList] = match;
+        const key = fullMatch.split("=")[0].trim(); // Tên của biến CID_LIST
+        acc[key] = cidList.trim().split("|"); // Chuyển chuỗi CID_LIST thành mảng
+        return acc;
+      }, {});
+
       res.status(200).json({
         success: true,
-        message: "lấy danh sách thành công",
-        data: cidArray,
+        message: "Lấy danh sách CID_LIST thành công",
+        data: cidLists,
       });
     } else {
-      res
-        .status(404)
-        .json({ message: "CID_LIST không tìm thấy trong file cấu hình." });
+      res.status(404).json({ message: "Không tìm thấy CID_LIST trong file cấu hình." });
     }
   } catch (error) {
     console.error("Lỗi khi lấy CID_LIST:", error);
     res.status(500).json({
       success: false,
       message: error.message,
-      data: [],
+      data: {},
     });
   }
 };
