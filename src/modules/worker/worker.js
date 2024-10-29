@@ -16,7 +16,7 @@ import { getParamsCDR } from "../cdr/getParams.js";
 import fs from "fs";
 
 const ASTERISK_CONFIG_PATH =
-    "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
+  "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
 
 const updateCDR = async () => {
   try {
@@ -742,18 +742,23 @@ const restartPBX = (req, res) => {
   }
 };
 const updateRandomList = (req, res) => {
-  const { cidList } = req.body;
+  const { cidList, outboundName } = req.body;
   const reloadAsterik = async () => {
     await ami.reload();
-  }
+  };
   if (!cidList || !Array.isArray(cidList) || cidList.length === 0) {
-    return res
-      .status(400)
-      .json({
-        message: "CID list không hợp lệ. Vui lòng cung cấp mảng Caller ID.",
-      });
+    return res.status(400).json({
+      message: "CID list không hợp lệ. Vui lòng cung cấp mảng Caller ID.",
+    });
+  }
+  if (!outboundName) {
+    return res.status(400).json({
+      message: "Tên Outbound không hợp lệ. Vui lòng cung cấp mảng Caller ID.",
+    });
   }
 
+  // Đặt tên chuỗi
+  const cidName = "CID_LIST_" + outboundName;
   // Chuỗi CID_LIST mới
   const newCidList = cidList.join("|");
 
@@ -763,38 +768,45 @@ const updateRandomList = (req, res) => {
 
     // Tìm và thay thế CID_LIST trong file
     const updatedContent = fileContent.replace(
-      /(CID_LIST=)(.*)/,
+      new RegExp(`(${cidName}=)(.*)`),
       `$1${newCidList}`
     );
 
     // Ghi lại nội dung file sau khi thay đổi
     fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
-    reloadAsterik()
-    res
-      .status(200)
-      .json({ success: true, message: "Cập nhật CID_LIST thành công!", data: newCidList });
+    reloadAsterik();
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật CID_LIST thành công!",
+      data: newCidList,
+    });
   } catch (error) {
     console.error("Lỗi khi cập nhật CID_LIST:", error);
-    res
-      .status(500)
-      .json({
-        message: "Đã xảy ra lỗi khi cập nhật CID_LIST.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Đã xảy ra lỗi khi cập nhật CID_LIST.",
+      error: error.message,
+    });
   }
 };
 const getRandomList = (req, res) => {
   try {
+    // Đặt tên chuỗi
+    const { outboundName } = req.query;
+    const cidName = "CID_LIST_" + outboundName;
     // Đọc nội dung file
     const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
 
     // Tìm kiếm CID_LIST trong file
-    const match = fileContent.match(/CID_LIST=(.*)/);
+    const match = fileContent.match(new RegExp(`${cidName}=(.*)`));
     if (match && match[1]) {
       const currentCidList = match[1].trim();
       // Chia tách danh sách Caller ID thành mảng
       const cidArray = currentCidList.split("|");
-      res.status(200).json({ success: true, message: "lấy danh sách thành công", data: cidArray });
+      res.status(200).json({
+        success: true,
+        message: "lấy danh sách thành công",
+        data: cidArray,
+      });
     } else {
       res
         .status(404)
@@ -802,13 +814,11 @@ const getRandomList = (req, res) => {
     }
   } catch (error) {
     console.error("Lỗi khi lấy CID_LIST:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message,
-        data: []
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      data: [],
+    });
   }
 };
 
