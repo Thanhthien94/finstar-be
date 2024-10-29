@@ -312,6 +312,21 @@ class AM extends EventEmitter {
       }
     });
   }
+
+  reload() {
+    this.ami.action({
+      action: 'Command',
+      command: 'core reload',
+    }, (err, res)=> {
+      if (err) {
+        console.log(err)
+        return err
+      } else {
+        console.log(res)
+        return res
+      }
+    })
+  }
 }
 
 // const ami = AM.getInstance();

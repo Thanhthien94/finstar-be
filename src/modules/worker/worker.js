@@ -9,6 +9,7 @@ import {
   TelcoModel,
   BillModel,
 } from "../../controllers/mongodb/index.js";
+import ami from "../../controllers/ami/ami.js";
 import { exec } from "child_process";
 import { DOMAIN } from "../../util/config/index.js";
 import { getParamsCDR } from "../cdr/getParams.js";
@@ -742,7 +743,9 @@ const restartPBX = (req, res) => {
 };
 const updateRandomList = (req, res) => {
   const { cidList } = req.body;
-
+  const reloadAsterik = async () => {
+    await ami.reload();
+  }
   if (!cidList || !Array.isArray(cidList) || cidList.length === 0) {
     return res
       .status(400)
@@ -766,7 +769,7 @@ const updateRandomList = (req, res) => {
 
     // Ghi lại nội dung file sau khi thay đổi
     fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
-
+    reloadAsterik()
     res
       .status(200)
       .json({ success: true, message: "Cập nhật CID_LIST thành công!", data: newCidList });
