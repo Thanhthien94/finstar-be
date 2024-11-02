@@ -414,7 +414,7 @@ const updateUser = async (req, res) => {
         .exec();
       console.log("update status: ", update);
       const { _id, ...rest } = update;
-      await updateDocument("finstar", _id, { status });
+      await updateDocument("finstar", _id, { status, updateAt: update.updateAt });
     } else if (findUser && usersTag.length) {
       updateUserTags(findUser._id, usersTag);
       const update = await UserModel.findOneAndUpdate(
