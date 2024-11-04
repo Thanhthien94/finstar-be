@@ -24,7 +24,16 @@ const fetchCDRMongo = async (req, res) => {
     Tags.push(user._id)
     // console.log('Tags: ', Tags)
     if (!role.includes("root") && !role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
+    const { userTag, level } = req.query;
+    console.log('userTag: ', userTag)
     const { filters, options } = getParamsCDRMongo(req);
+    if(userTag && !level) {
+      const userTags = await UserModel.find({usersTag: userTag})
+      const newTags = userTags.map((item)=> item._id)
+      if(newTags.length) filters.user = {$in: newTags.map(item => new mongoose.Types.ObjectId(item))};
+    } else if (userTag && level === 'sales') {
+      filters.user = {$in: [new mongoose.Types.ObjectId(userTag)]};
+    }
     const total = await CDRModel.count({ $and: [filters, filter] });
     const result = await CDRModel.find(
       { $and: [filters, filter] },

@@ -154,10 +154,14 @@ const getListUsers = async (req, res) => {
       sort,
     } = req.query;
     const user = await UserModel.findById(_id);
-    console.log("user: ", user);
+    // console.log("user: ", user);
+    // console.log("roleFilter: ", roleFilter);
+    let userTag = null;
     if (!role.includes("root")) {
       company = user?.company;
-      filter = { company: user.company };
+    }
+    if (!role.includes("root") && !role.includes("admin")) {
+      userTag = _id;
     }
     const searchUser = async (keyword) => {
       const body = {
@@ -233,6 +237,8 @@ const getListUsers = async (req, res) => {
         body.query.bool.must.push(searchQuery);
       }
       if (status) body.query.bool.must.push({ term: { status } });
+      if (roleFilter) body.query.bool.must.push({ nested: { path: "role", query: { term: { "role.name": roleFilter } } } });
+      if (userTag) body.query.bool.must.push({ nested: { path: "usersTag", query: { term: { "usersTag._id": userTag } } } });
       if (company)
         body.query.bool.must.push({ term: { "company._id": company } });
       if (limit) body.size = limit;
