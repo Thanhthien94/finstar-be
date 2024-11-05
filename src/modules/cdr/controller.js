@@ -39,7 +39,7 @@ const fetchCDRMongo = async (req, res) => {
       { $and: [filters, filter] },
       null,
       options
-    ).populate("user", ["name"]);
+    ).populate("user", "lastname firstname");
     const analysBill = await CDRModel.aggregate([
       {
         $match: {
