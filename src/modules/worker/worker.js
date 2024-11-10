@@ -8,7 +8,7 @@ import {
   SipModel,
   TelcoModel,
   BillModel,
-  companyModel,
+  CompanyModel,
 } from "../../controllers/mongodb/index.js";
 import ami from "../../controllers/ami/ami.js";
 import { exec } from "child_process";
@@ -59,7 +59,7 @@ const checkDuplicate = async () => {
     });
     console.log("data check duplicate length: ", data.length);
     if(data.length > 0) {
-      companyModel.findByIdAndUpdate(finstarID, { $push: { note: { checkDuplicate: data, length: data.length, date: new Date()} } })
+      CompanyModel.findByIdAndUpdate(finstarID, { $push: { note: { checkDuplicate: data, length: data.length, date: new Date()} } })
     }
   } catch (error) {
     console.log({ error });
