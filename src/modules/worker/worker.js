@@ -11,7 +11,7 @@ import {
 } from "../../controllers/mongodb/index.js";
 import ami from "../../controllers/ami/ami.js";
 import { exec } from "child_process";
-import { DOMAIN } from "../../util/config/index.js";
+import { DOMAIN, NODE_ENV } from "../../util/config/index.js";
 import { getParamsCDR } from "../cdr/getParams.js";
 import fs from "fs";
 
@@ -20,6 +20,7 @@ const ASTERISK_CONFIG_PATH =
 
 const checkDuplicate = async () => {
   try {
+    if(NODE_ENV !== "prod") return;
     const data = await CDRModel.aggregate([
       {
         $match: {
@@ -60,6 +61,7 @@ const checkDuplicate = async () => {
 };
 const updateCDR = async () => {
   try {
+    if(NODE_ENV !== "prod") return;
     const getTime = JSON.stringify(
       new Date(new Date().getTime() - 60 * 60 * 1000)
     ).slice(1, 20);
@@ -275,7 +277,7 @@ const updateCDR = async () => {
 
 setInterval(checkDuplicate, 60 * 60 * 1000);
 
-setInterval(updateCDR, 1 * 60 * 1000);
+// setInterval(updateCDR, 1 * 60 * 1000);
 
 const migrateCDR = async (req, res) => {
   try {
