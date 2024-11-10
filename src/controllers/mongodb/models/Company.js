@@ -13,6 +13,7 @@ const CompanySchema = new Schema(
     color: { type: String, default: 'green' },
     permission: [{type: String, default: ""}],
     countCode: { type: Number, default: 1000 },
+    note: [{ type: Schema.Types.Mixed, default: {} }],
     status: { type: String, enum: ['Active', 'Locked'], default: 'Active' },
   },
   {

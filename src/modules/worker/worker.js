@@ -8,6 +8,7 @@ import {
   SipModel,
   TelcoModel,
   BillModel,
+  companyModel,
 } from "../../controllers/mongodb/index.js";
 import ami from "../../controllers/ami/ami.js";
 import { exec } from "child_process";
@@ -17,6 +18,8 @@ import fs from "fs";
 
 const ASTERISK_CONFIG_PATH =
   "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
+
+  const finstarID = '66472fdae4a52ad5e816e0a0'
 
 const checkDuplicate = async () => {
   try {
@@ -55,6 +58,9 @@ const checkDuplicate = async () => {
       });
     });
     console.log("data check duplicate length: ", data.length);
+    if(data.length > 0) {
+      companyModel.findByIdAndUpdate(finstarID, { $push: { note: { checkDuplicate: data, length: data.length, date: new Date()} } })
+    }
   } catch (error) {
     console.log({ error });
   }
