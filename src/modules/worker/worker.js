@@ -835,9 +835,13 @@ const getSizePaths = async (req, res) => {
       return res.status(400).json({ error: 'Paths should be an array' });
     }
     const getSize = (filePath) => {
-      const stats = fs.stat(filePath);
-      console.log({ stats });
-      return stats.size;
+      try {
+        const stats = fs.stat(filePath);
+        console.log({ stats });
+        return stats.size;
+      } catch (error) {
+        console.log('error', error);
+      }
     };
 
     const sizes = await Promise.all(paths.map(async (p) => {
@@ -845,7 +849,8 @@ const getSizePaths = async (req, res) => {
         const size = await getSize(p);
         return { path: p, size };
       } catch (error) {
-        return { path: p, error: 'Unable to get size' };
+        console.log('error', error);
+        return { path: p, error: `Unable to get size - ${error.message}`, };
       }
     }));
     res.status(200).json({
