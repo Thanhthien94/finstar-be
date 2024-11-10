@@ -8,6 +8,7 @@ import {
   AMI_USERNAME,
   AMI_PASSWORD,
   NODE_ENV,
+  DOMAIN,
 } from "../../util/config/index.js";
 import {
   CustomerModel,
@@ -49,7 +50,15 @@ class AM extends EventEmitter {
       ) {
         console.log("event: ", event);
         const cnum = event.channel.split("/")[1].split("-")[0];
-        updateCDR(event.calleridnum, cnum, event.connectedlinenum, event.context, event.uniqueid);
+        setTimeout(() => {
+          updateCDR(
+            event.calleridnum,
+            cnum,
+            event.connectedlinenum,
+            event.context,
+            event.uniqueid
+          );
+        }, 5 * 1000);
       }
       if (
         event.event === "Hangup" &&
@@ -384,7 +393,7 @@ const checkDuplicate = async () => {
     console.log({ error });
   }
 };
-async function updateCDR (SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
+async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
   try {
     if (NODE_ENV !== "prod") return;
     const getTime = JSON.stringify(
@@ -421,7 +430,7 @@ async function updateCDR (SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
     const SIPs = await SipModel.find().populate("user").populate("usersTag");
     const listCnum = SIPs.map((item) => item.extension);
     if (!listCnum && !users.toString()) throw new Error("List not exist");
-    if(!listCnum.includes(CNUM)) return;
+    if (!listCnum.includes(CNUM)) return;
 
     const lastapp = "Dial";
     // const filter = ` WHERE (cnum IN (${listCnum}) OR src IN (${listCnum})) AND lastapp IN ('${lastapp}') AND calldate >= ${JSON.stringify(
@@ -435,7 +444,7 @@ async function updateCDR (SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
         `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
-
+    console.log('results: ', results)
     let lastData = [];
     for (const result of results) {
       const dst = result.dst === "tdial" ? result.did : result.dst;
