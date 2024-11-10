@@ -834,9 +834,9 @@ const getSizePaths = async (req, res) => {
     if (!Array.isArray(paths)) {
       return res.status(400).json({ error: 'Paths should be an array' });
     }
-    const getSize = (filePath) => {
+    const getSize = async(filePath) => {
       try {
-        const stats = fs.stat(filePath);
+        const stats = await fs.stat(filePath);
         console.log({ stats });
         return stats.size;
       } catch (error) {
