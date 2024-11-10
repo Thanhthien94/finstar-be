@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 import isEqual from "lodash";
 // import stream from "../../util/logger/Logger.js";
-import { MONGO_URL, LOG_LEVEL } from "../../util/config/index.js";
+import { MONGO_URL, LOG_LEVEL, NODE_ENV } from "../../util/config/index.js";
 import moment from "../../util/monent/moment.js";
 import { CallGroupModel } from "./models/CallGroup.js";
 import { ContextModel } from "./models/Context.js";
@@ -36,7 +36,9 @@ class Mongoose {
 
   constructor() {
     mongoose.Promise = global.Promise;
-    mongoose.set("debug", isEqual(LOG_LEVEL, "debug"));
+    NODE_ENV === "development"
+      ? mongoose.set("debug", isEqual(LOG_LEVEL, "debug"))
+      : null;
     mongoose.connect(MONGO_URL,{
       connectTimeoutMS: 2400 * 1000,
     });

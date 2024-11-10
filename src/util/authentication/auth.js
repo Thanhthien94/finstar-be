@@ -39,15 +39,15 @@ const verifyToken = async (req, res, next) => {
     // console.log('decode: ',decode);
     const id = decode._id;
     const userName = decode.userName;
-    await UserRequestModel.create({
-      userId: id,
-      userName,
-      requestConnection: { ...requestConnection, ...headers, url },
-      requestInfo: { url },
-    });
-    await UserModel.findByIdAndUpdate(id, {
-      request: { startTime, ...requestConnection, ...headers, url },
-    });
+    // await UserRequestModel.create({
+    //   userId: id,
+    //   userName,
+    //   requestConnection: { ...requestConnection, ...headers, url },
+    //   requestInfo: { url },
+    // });
+    // await UserModel.findByIdAndUpdate(id, {
+    //   request: { startTime, ...requestConnection, ...headers, url },
+    // });
     req.decode = decode;
     req.token = token
     next();
