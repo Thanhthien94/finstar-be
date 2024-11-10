@@ -743,7 +743,7 @@ const restartPBX = (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
-const updateRandomList = (req, res) => {
+const updateRandomList = async (req, res) => {
   const { cidList, outboundName } = req.body;
   const reloadAsterik = async () => {
     await ami.reload();
@@ -766,7 +766,7 @@ const updateRandomList = (req, res) => {
 
   try {
     // Đọc nội dung file
-    const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
+    const fileContent = await fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
 
     // Tìm và thay thế CID_LIST trong file
     const updatedContent = fileContent.replace(
@@ -775,7 +775,7 @@ const updateRandomList = (req, res) => {
     );
 
     // Ghi lại nội dung file sau khi thay đổi
-    fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
+    await fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
     reloadAsterik();
     res.status(200).json({
       success: true,
@@ -790,10 +790,10 @@ const updateRandomList = (req, res) => {
     });
   }
 };
-const getRandomList = (req, res) => {
+const getRandomList = async (req, res) => {
   try {
     // Đọc nội dung file
-    const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
+    const fileContent = await fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
 
     // Sử dụng regex để tìm tất cả các dòng bắt đầu bằng CID_LIST_
     const matches = [...fileContent.matchAll(/^CID_LIST_\w*=(.*)/gm)];
