@@ -13,7 +13,7 @@ import ami from "../../controllers/ami/ami.js";
 import { exec } from "child_process";
 import { DOMAIN } from "../../util/config/index.js";
 import { getParamsCDR } from "../cdr/getParams.js";
-import {promises as fs} from "fs";
+import fs from "fs";
 
 const ASTERISK_CONFIG_PATH =
   "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
@@ -743,7 +743,7 @@ const restartPBX = (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
-const updateRandomList = async (req, res) => {
+const updateRandomList = (req, res) => {
   const { cidList, outboundName } = req.body;
   const reloadAsterik = async () => {
     await ami.reload();
@@ -766,7 +766,7 @@ const updateRandomList = async (req, res) => {
 
   try {
     // Đọc nội dung file
-    const fileContent = await fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
+    const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
 
     // Tìm và thay thế CID_LIST trong file
     const updatedContent = fileContent.replace(
@@ -775,7 +775,7 @@ const updateRandomList = async (req, res) => {
     );
 
     // Ghi lại nội dung file sau khi thay đổi
-    await fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
+     fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
     reloadAsterik();
     res.status(200).json({
       success: true,
@@ -790,10 +790,10 @@ const updateRandomList = async (req, res) => {
     });
   }
 };
-const getRandomList = async (req, res) => {
+const getRandomList = (req, res) => {
   try {
     // Đọc nội dung file
-    const fileContent = await fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
+    const fileContent = fs.readFileSync(ASTERISK_CONFIG_PATH, "utf8");
 
     // Sử dụng regex để tìm tất cả các dòng bắt đầu bằng CID_LIST_
     const matches = [...fileContent.matchAll(/^CID_LIST_\w*=(.*)/gm)];
@@ -827,6 +827,20 @@ const getRandomList = async (req, res) => {
   }
 };
 
+function getDirectorySize(path) {
+  return new Promise((resolve, reject) => {
+    exec(`du -sh ${path}`, (error, stdout, stderr) => {
+      if (error) {
+        reject(`Error: ${stderr || error.message}`);
+      } else {
+        // stdout có dạng "100M    /path/to/directory"
+        const size = stdout.split("\t")[0]; // Lấy phần dung lượng
+        resolve(size);
+      }
+    });
+  });
+}
+
 const getSizePaths = async (req, res) => {
   try {
     const paths = req.body.paths; // Mảng path truyền vào qua body
@@ -834,19 +848,10 @@ const getSizePaths = async (req, res) => {
     if (!Array.isArray(paths)) {
       return res.status(400).json({ error: 'Paths should be an array' });
     }
-    const getSize = async(filePath) => {
-      try {
-        const stats = await fs.stat(filePath);
-        console.log({ stats });
-        return stats.size;
-      } catch (error) {
-        console.log('error', error);
-      }
-    };
 
     const sizes = await Promise.all(paths.map(async (p) => {
       try {
-        const size = await getSize(p);
+        const size = await getDirectorySize(p);
         return { path: p, size };
       } catch (error) {
         console.log('error', error);
