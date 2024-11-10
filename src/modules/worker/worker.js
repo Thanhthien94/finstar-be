@@ -13,7 +13,7 @@ import ami from "../../controllers/ami/ami.js";
 import { exec } from "child_process";
 import { DOMAIN } from "../../util/config/index.js";
 import { getParamsCDR } from "../cdr/getParams.js";
-import fs from "fs";
+import {promises as fs} from "fs";
 
 const ASTERISK_CONFIG_PATH =
   "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
