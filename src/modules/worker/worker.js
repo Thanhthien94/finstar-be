@@ -19,45 +19,45 @@ const ASTERISK_CONFIG_PATH =
   "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
 
 const checkDuplicate = async () => {
-    try {
-      const data = await CDRModel.aggregate([
-        {
-          $match: {
-            createdAt: {
-              $gte: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000),
-            },
+  try {
+    const data = await CDRModel.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000),
           },
         },
-  
-        {
-          $group: {
-            _id: {
-              billsec: "$billsec",
-              cnum: "$cnum",
-              dst: "$dst",
-              createdAt: "$createdAt",
-            },
-            ids: { $push: "$_id" },
-            count: { $sum: 1 },
+      },
+
+      {
+        $group: {
+          _id: {
+            billsec: "$billsec",
+            cnum: "$cnum",
+            dst: "$dst",
+            createdAt: "$createdAt",
           },
+          ids: { $push: "$_id" },
+          count: { $sum: 1 },
         },
-        {
-          $match: {
-            count: { $gt: 1 }, // lọc những nhóm có nhiều hơn 1 bản ghi
-          },
+      },
+      {
+        $match: {
+          count: { $gt: 1 }, // lọc những nhóm có nhiều hơn 1 bản ghi
         },
-      ]);
-      data.forEach(async (doc) => {
-        // giữ lại một bản ghi, xóa các bản ghi khác
-        await CDRModel.deleteMany({
-          _id: { $in: doc.ids.slice(1) }, // xóa các bản ghi trừ bản đầu tiên
-        });
+      },
+    ]);
+    data.forEach(async (doc) => {
+      // giữ lại một bản ghi, xóa các bản ghi khác
+      await CDRModel.deleteMany({
+        _id: { $in: doc.ids.slice(1) }, // xóa các bản ghi trừ bản đầu tiên
       });
-      console.log("data check duplicate length: ", data.length);
-    } catch (error) {
-      console.log({ error });
-    }
-  };
+    });
+    console.log("data check duplicate length: ", data.length);
+  } catch (error) {
+    console.log({ error });
+  }
+};
 const updateCDR = async () => {
   try {
     const getTime = JSON.stringify(
@@ -813,10 +813,47 @@ const getRandomList = (req, res) => {
         data: cidLists,
       });
     } else {
-      res.status(404).json({ message: "Không tìm thấy CID_LIST trong file cấu hình." });
+      res
+        .status(404)
+        .json({ message: "Không tìm thấy CID_LIST trong file cấu hình." });
     }
   } catch (error) {
     console.error("Lỗi khi lấy CID_LIST:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      data: {},
+    });
+  }
+};
+
+const getSizePaths = async (req, res) => {
+  try {
+    const paths = req.body.paths; // Mảng path truyền vào qua body
+
+    if (!Array.isArray(paths)) {
+      return res.status(400).json({ error: 'Paths should be an array' });
+    }
+    const getSize = async (filePath) => {
+      const stats = await fs.stat(filePath);
+      return stats.size;
+    };
+
+    const sizes = await Promise.all(paths.map(async (p) => {
+      try {
+        const size = await getSize(p);
+        return { path: p, size };
+      } catch (error) {
+        return { path: p, error: 'Unable to get size' };
+      }
+    }));
+    res.status(200).json({
+      success: true,
+      message: "Lấy danh sách dung lượng thành công",
+      data: sizes,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy size:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -835,4 +872,5 @@ export default {
   restartPBX,
   updateRandomList,
   getRandomList,
+  getSizePaths,
 };

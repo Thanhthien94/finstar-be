@@ -12,5 +12,6 @@ Route.delete('/iptables/blacklist', verifyToken, worker.removeRule)
 Route.post('/pbx/restart', verifyToken, worker.restartPBX)
 Route.get('/pbx/random', verifyToken, worker.getRandomList)
 Route.post('/pbx/random', verifyToken, worker.updateRandomList)
+Route.post('/system/path/size', verifyToken, worker.getSizePaths)
 
 export default Route
