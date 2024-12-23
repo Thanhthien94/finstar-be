@@ -8,7 +8,6 @@ import axios from "axios";
 import { WORKER_PORT, WORKER_HOST } from "../../util/config/index.js";
 import mongoose from "mongoose";
 
-
 const fetchCDRMongo = async (req, res) => {
   try {
     const { role, _id } = req.decode;
@@ -16,23 +15,29 @@ const fetchCDRMongo = async (req, res) => {
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company;
     // fecth CDR start
-    const usersTag = await UserModel.find({usersTag: user._id})
+    const usersTag = await UserModel.find({ usersTag: user._id });
     // console.log('userTags: ', usersTag)
-    let Tags = usersTag.map((item)=> {
-      return item._id
-    })
-    Tags.push(user._id)
+    let Tags = usersTag.map((item) => {
+      return item._id;
+    });
+    Tags.push(user._id);
     // console.log('Tags: ', Tags)
-    if (!role.includes("root") && !role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
+    if (!role.includes("root") && !role.includes("admin") && Tags.length)
+      filter.user = {
+        $in: Tags.map((item) => new mongoose.Types.ObjectId(item)),
+      };
     const { userTag, level } = req.query;
-    console.log('userTag: ', userTag)
+    console.log("userTag: ", userTag);
     const { filters, options } = getParamsCDRMongo(req);
-    if(userTag && !level) {
-      const userTags = await UserModel.find({usersTag: userTag})
-      const newTags = userTags.map((item)=> item._id)
-      if(newTags.length) filters.user = {$in: newTags.map(item => new mongoose.Types.ObjectId(item))};
-    } else if (userTag && level === 'sales') {
-      filters.user = {$in: [new mongoose.Types.ObjectId(userTag)]};
+    if (userTag && !level) {
+      const userTags = await UserModel.find({ usersTag: userTag });
+      const newTags = userTags.map((item) => item._id);
+      if (newTags.length)
+        filters.user = {
+          $in: newTags.map((item) => new mongoose.Types.ObjectId(item)),
+        };
+    } else if (userTag && level === "sales") {
+      filters.user = { $in: [new mongoose.Types.ObjectId(userTag)] };
     }
     const total = await CDRModel.count({ $and: [filters, filter] });
     const result = await CDRModel.find(
@@ -133,17 +138,20 @@ const fetchTalkTime = async (req, res) => {
     const filter = {};
     if (!role.includes("root")) filter.company = user?.company;
     // fecth CDR start
-    const usersTag = await UserModel.find({usersTag: user._id})
+    const usersTag = await UserModel.find({ usersTag: user._id });
     // console.log('userTags: ', usersTag)
-    let Tags = usersTag.map((item)=> {
-      return item._id
-    })
-    Tags.push(user._id)
+    let Tags = usersTag.map((item) => {
+      return item._id;
+    });
+    Tags.push(user._id);
     // console.log('Tags: ', Tags)
-    if (!role.includes("root") && !role.includes("admin") && Tags.length) filter.user = {$in: Tags.map(item => new mongoose.Types.ObjectId(item))};
+    if (!role.includes("root") && !role.includes("admin") && Tags.length)
+      filter.user = {
+        $in: Tags.map((item) => new mongoose.Types.ObjectId(item)),
+      };
     // req.query.cnum = { $ne: "" }
     const { filters, options } = getParamsCDRMongo(req);
-    console.log('filters: ', filters)
+    console.log("filters: ", filters);
     const analysTalkTime = await CDRModel.aggregate([
       {
         $match: {
@@ -226,7 +234,7 @@ const fetchTalkTime = async (req, res) => {
       data: {
         page: options?.skip + 1,
         limit: options?.limit,
-        analysTalkTime: analysTalkTime|| [],
+        analysTalkTime: analysTalkTime || [],
       },
     });
   } catch (error) {
@@ -240,37 +248,35 @@ const check = async (req, res) => {
       {
         $match: {
           createdAt: {
-            $gte: new Date(
-              new Date("2024-09-01").getTime()
-            ),
-          }
-        }
+            $gte: new Date(new Date("2024-09-01").getTime()),
+          },
+        },
       },
-    
+
       {
         $group: {
-          _id: { 
-            billsec: "$billsec", 
-            dst: "$dst" ,
-            createdAt: "$createdAt" ,
+          _id: {
+            billsec: "$billsec",
+            dst: "$dst",
+            createdAt: "$createdAt",
           },
           ids: { $push: "$_id" },
-          count: { $sum: 1 }
-        }
+          count: { $sum: 1 },
+        },
       },
       {
         $match: {
-          count: { $gt: 1 }          // lọc những nhóm có nhiều hơn 1 bản ghi
-        }
-      }
-    ])
+          count: { $gt: 1 }, // lọc những nhóm có nhiều hơn 1 bản ghi
+        },
+      },
+    ]);
     // data.forEach( async doc => {
     //   // giữ lại một bản ghi, xóa các bản ghi khác
     //   await CDRModel.deleteMany({
     //     _id: { $in: doc.ids.slice(1) }               // xóa các bản ghi trừ bản đầu tiên
     //   });
     // });
-    console.log('length: ', data.length)
+    console.log("length: ", data.length);
     res.status(200).json({
       success: true,
       message: "get list cdr successful",
@@ -456,24 +462,26 @@ const fetchCDRToDownload = async (req, res) => {
 
 const aggregateCDRLatest = async (req, res) => {
   const { role, _id } = req.decode;
-    const user = await UserModel.findById(_id);
-    const filter = {};
-    if (!role.includes("root")) filter.company = user?.company;
-    // fecth CDR start
-    // req.query.cnum = { $ne: "" }
-    const { filters } = getParamsCDRMongo(req);
+  const user = await UserModel.findById(_id);
+  const filter = {};
+  if (!role.includes("root")) filter.company = user?.company;
+  // fecth CDR start
+  // req.query.cnum = { $ne: "" }
+  const { filters } = getParamsCDRMongo(req);
   try {
     const aggregateQuery = await CDRModel.aggregate([
       {
         $match: {
           $and: [
-            {createdAt: {
-              $gte: new Date(new Date() - 24 * 60 * 60 * 1000) // Lọc các bản ghi trong 24 giờ gần nhất
-            }},
+            {
+              createdAt: {
+                $gte: new Date(new Date() - 24 * 60 * 60 * 1000), // Lọc các bản ghi trong 24 giờ gần nhất
+              },
+            },
             filter,
-            filters
-          ]
-        }
+            filters,
+          ],
+        },
       },
       {
         $project: {
@@ -481,8 +489,8 @@ const aggregateCDRLatest = async (req, res) => {
           month: { $month: "$createdAt" },
           day: { $dayOfMonth: "$createdAt" },
           hour: { $hour: "$createdAt" },
-          disposition: 1
-        }
+          disposition: 1,
+        },
       },
       {
         $group: {
@@ -490,18 +498,18 @@ const aggregateCDRLatest = async (req, res) => {
             year: "$year",
             month: "$month",
             day: "$day",
-            hour: "$hour"
+            hour: "$hour",
           },
           dispositions: {
             $push: {
               disposition: "$disposition",
-              count: 1
-            }
-          }
-        }
+              count: 1,
+            },
+          },
+        },
       },
       {
-        $unwind: "$dispositions"
+        $unwind: "$dispositions",
       },
       {
         $group: {
@@ -510,10 +518,10 @@ const aggregateCDRLatest = async (req, res) => {
             month: "$_id.month",
             day: "$_id.day",
             hour: "$_id.hour",
-            disposition: "$dispositions.disposition"
+            disposition: "$dispositions.disposition",
           },
-          count: { $sum: "$dispositions.count" }
-        }
+          count: { $sum: "$dispositions.count" },
+        },
       },
       {
         $group: {
@@ -521,41 +529,41 @@ const aggregateCDRLatest = async (req, res) => {
             year: "$_id.year",
             month: "$_id.month",
             day: "$_id.day",
-            hour: "$_id.hour"
+            hour: "$_id.hour",
           },
           counts: {
             $push: {
               disposition: "$_id.disposition",
-              count: "$count"
-            }
-          }
-        }
+              count: "$count",
+            },
+          },
+        },
       },
       {
         $project: {
           _id: 0,
           timestamp: {
             $dateFromParts: {
-              'year': '$_id.year',
-              'month': '$_id.month',
-              'day': '$_id.day',
-              'hour': '$_id.hour',
-              'minute': 0,
-              'second': 0,
-              'millisecond': 0
-            }
+              year: "$_id.year",
+              month: "$_id.month",
+              day: "$_id.day",
+              hour: "$_id.hour",
+              minute: 0,
+              second: 0,
+              millisecond: 0,
+            },
           },
-          counts: 1
-        }
+          counts: 1,
+        },
       },
       {
-        $sort: { timestamp: 1 } // Sắp xếp theo mốc giờ
-      }
+        $sort: { timestamp: 1 }, // Sắp xếp theo mốc giờ
+      },
     ]);
     res.status(200).json({
       success: true,
       message: "get list cdr successful",
-      data: aggregateQuery
+      data: aggregateQuery,
     });
   } catch (error) {
     res.status(400).json({
@@ -1291,6 +1299,35 @@ const fetchTalkTimeToDownload = async (req, res) => {
   }
 };
 
+const updateLinkRecord = async (req, res) => {
+  try {
+    const data = await CDRModel.find({
+      disposition: "ANSWERED",
+      linkRecord: { $regex: "^https://office\\.finstar\\.vn" },
+    });
+    data.forEach(async (doc) => {
+      let newLink = doc.linkRecord.replace(
+        "https://office.finstar.vn",
+        "https://office.onestar.vn"
+      );
+      await CDRModel.updateOne(
+        { _id: doc._id },
+        { $set: { linkRecord: newLink } }
+      );
+      console.log("newLink: ", newLink);
+    });
+    console.log("length: ", data.length);
+    res.status(200).json({
+      success: true,
+      message: "get list cdr successful",
+      data,
+    });
+  } catch (error) {
+    console.log({ error });
+    res.status(400).json({ success: false, message: "Can not update list" });
+  }
+};
+
 export default {
   fetchTalkTime,
   fetchTalkTimeToDownload,
@@ -1301,4 +1338,5 @@ export default {
   migrateCDR,
   fetchCDRMongo,
   check,
+  updateLinkRecord,
 };

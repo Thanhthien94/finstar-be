@@ -424,7 +424,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
       null,
       options
     );
-    console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
+    // console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
     const telco = await TelcoModel.find().lean().exec();
     const { viettel, vinaphone, mobifone, others } = telco[0];
     const SIPs = await SipModel.find().populate("user").populate("usersTag");

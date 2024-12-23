@@ -15,6 +15,7 @@ Route.get('/aggregate/ampm', verifyToken, cdr.aggregateCDRAmPm)
 Route.get('/aggregate/latest', verifyToken, cdr.aggregateCDRLatest)
 Route.get('/aggregate/ranked', verifyToken, cdr.aggregateRankedByTimeFrame)
 Route.get('/talktime/download', verifyToken, cdr.fetchTalkTimeToDownload)
+Route.put('/update/link', verifyToken, cdr.updateLinkRecord)
 // Route.post('/context', verifyToken, call.addContext)
 
 export default Route
