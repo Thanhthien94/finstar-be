@@ -510,7 +510,11 @@ const migrateCDR = async (req, res) => {
         const check = await CDRModel.findOne(data);
         if (!check) {
           lastData.push(data);
-          console.log("process: ", (lastData.length / results.length) * 100);
+          console.log(
+            "process: ",
+            ((lastData.length / results.length) * 100).toFixed(2),
+            "%"
+          );
         }
       }
     }
