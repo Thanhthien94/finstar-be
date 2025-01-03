@@ -404,27 +404,38 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
 
     const options = {};
     options.sort = { createdAt: -1 };
-    const priceViettel = await BillModel.findOne(
-      { type: "priceViettel" },
-      null,
-      options
-    );
-    const priceVinaphone = await BillModel.findOne(
-      { type: "priceVinaphone" },
-      null,
-      options
-    );
-    const priceMobifone = await BillModel.findOne(
-      { type: "priceMobifone" },
-      null,
-      options
-    );
-    const priceOthers = await BillModel.findOne(
-      { type: "priceOthers" },
-      null,
-      options
-    );
-    console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
+    const findPriceInfo = async (cnum, type) => {
+      const sip = await SipModel.findOne({ extension: cnum });
+      const { company } = sip;
+      const price = await BillModel.findOne(
+        { type: type, company },
+        null,
+        options
+      );
+      console.log("priceInfo: ", price);
+      return price;
+    };
+    // const priceViettel = await BillModel.findOne(
+    //   { type: "priceViettel" },
+    //   null,
+    //   options
+    // );
+    // const priceVinaphone = await BillModel.findOne(
+    //   { type: "priceVinaphone" },
+    //   null,
+    //   options
+    // );
+    // const priceMobifone = await BillModel.findOne(
+    //   { type: "priceMobifone" },
+    //   null,
+    //   options
+    // );
+    // const priceOthers = await BillModel.findOne(
+    //   { type: "priceOthers" },
+    //   null,
+    //   options
+    // );
+    // console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
     const telco = await TelcoModel.find().lean().exec();
     const { viettel, vinaphone, mobifone, others } = telco[0];
     const SIPs = await SipModel.find().populate("user").populate("usersTag");
@@ -444,7 +455,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
         `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
-    console.log('results: ', results)
+    console.log("results: ", results);
     let lastData = [];
     for (const result of results) {
       const dst = result.dst === "tdial" ? result.did : result.dst;
@@ -475,6 +486,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
 
         if (viettel.includes(checkNumber)) {
           telco = "viettel";
+          const priceViettel = await findPriceInfo(result.cnum, "priceViettel");
           billID = priceViettel?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -491,6 +503,10 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
         }
         if (vinaphone.includes(checkNumber)) {
           telco = "vinaphone";
+          const priceVinaphone = await findPriceInfo(
+            result.cnum,
+            "priceVinaphone"
+          );
           billID = priceVinaphone?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -507,6 +523,10 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
         }
         if (mobifone.includes(checkNumber)) {
           telco = "mobifone";
+          const priceMobifone = await findPriceInfo(
+            result.cnum,
+            "priceMobifone"
+          );
           billID = priceMobifone?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -523,6 +543,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
         }
         if (others.includes(checkNumber)) {
           telco = "others";
+          const priceOthers = await findPriceInfo(result.cnum, "priceOthers");
           billID = priceOthers?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6

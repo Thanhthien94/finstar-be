@@ -19,11 +19,11 @@ import fs from "fs";
 const ASTERISK_CONFIG_PATH =
   "/opt/izpbx/data/izpbx/etc/asterisk/extensions_override_freepbx.conf";
 
-  const finstarID = '66472fdae4a52ad5e816e0a0'
+const finstarID = "66472fdae4a52ad5e816e0a0";
 
 const checkDuplicate = async () => {
   try {
-    if(NODE_ENV !== "prod") return;
+    if (NODE_ENV !== "prod") return;
     const data = await CDRModel.aggregate([
       {
         $match: {
@@ -58,8 +58,12 @@ const checkDuplicate = async () => {
       });
     });
     console.log("data check duplicate length: ", data.length);
-    if(data.length > 0) {
-      CompanyModel.findByIdAndUpdate(finstarID, { $push: { note: { checkDuplicate: data, length: data.length, date: new Date()} } })
+    if (data.length > 0) {
+      CompanyModel.findByIdAndUpdate(finstarID, {
+        $push: {
+          note: { checkDuplicate: data, length: data.length, date: new Date() },
+        },
+      });
     }
   } catch (error) {
     console.log({ error });
@@ -67,7 +71,7 @@ const checkDuplicate = async () => {
 };
 const updateCDR = async () => {
   try {
-    if(NODE_ENV !== "prod") return;
+    if (NODE_ENV !== "prod") return;
     const getTime = JSON.stringify(
       new Date(new Date().getTime() - 60 * 60 * 1000)
     ).slice(1, 20);
@@ -296,27 +300,39 @@ const migrateCDR = async (req, res) => {
     const [users] = await Bluebird.all([UserModel.find().lean().exec()]);
     const options = {};
     options.sort = { createdAt: -1 };
-    const priceViettel = await BillModel.findOne(
-      { type: "priceViettel" },
-      null,
-      options
-    );
-    const priceVinaphone = await BillModel.findOne(
-      { type: "priceVinaphone" },
-      null,
-      options
-    );
-    const priceMobifone = await BillModel.findOne(
-      { type: "priceMobifone" },
-      null,
-      options
-    );
-    const priceOthers = await BillModel.findOne(
-      { type: "priceOthers" },
-      null,
-      options
-    );
-    console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
+
+    const findPriceInfo = async (cnum, type) => {
+      const sip = await SipModel.findOne({ extension: cnum });
+      const { company } = sip;
+      const price = await BillModel.findOne(
+        { type: type, company },
+        null,
+        options
+      );
+      console.log("priceInfo: ", price);
+      return price;
+    };
+    // const priceViettel = await BillModel.findOne(
+    //   { type: "priceViettel" },
+    //   null,
+    //   options
+    // );
+    // const priceVinaphone = await BillModel.findOne(
+    //   { type: "priceVinaphone" },
+    //   null,
+    //   options
+    // );
+    // const priceMobifone = await BillModel.findOne(
+    //   { type: "priceMobifone" },
+    //   null,
+    //   options
+    // );
+    // const priceOthers = await BillModel.findOne(
+    //   { type: "priceOthers" },
+    //   null,
+    //   options
+    // );
+    // console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
     const telco = await TelcoModel.find().lean().exec();
     const { viettel, vinaphone, mobifone, others } = telco[0];
     const SIPs = await SipModel.find().populate("user").populate("usersTag");
@@ -365,6 +381,7 @@ const migrateCDR = async (req, res) => {
 
         if (viettel.includes(checkNumber)) {
           telco = "viettel";
+          const priceViettel = await findPriceInfo(result.cnum, "priceViettel");
           billID = priceViettel?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -381,6 +398,7 @@ const migrateCDR = async (req, res) => {
         }
         if (vinaphone.includes(checkNumber)) {
           telco = "vinaphone";
+          const priceVinaphone = await findPriceInfo(result.cnum, "priceVinaphone");
           billID = priceVinaphone?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -397,6 +415,7 @@ const migrateCDR = async (req, res) => {
         }
         if (mobifone.includes(checkNumber)) {
           telco = "mobifone";
+          const priceMobifone = await findPriceInfo(result.cnum, "priceMobifone");
           billID = priceMobifone?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -413,6 +432,7 @@ const migrateCDR = async (req, res) => {
         }
         if (others.includes(checkNumber)) {
           telco = "others";
+          const priceOthers = await findPriceInfo(result.cnum, "priceOthers");
           billID = priceOthers?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -783,7 +803,7 @@ const updateRandomList = (req, res) => {
     );
 
     // Ghi lại nội dung file sau khi thay đổi
-     fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
+    fs.writeFileSync(ASTERISK_CONFIG_PATH, updatedContent, "utf8");
     reloadAsterik();
     res.status(200).json({
       success: true,
@@ -854,18 +874,20 @@ const getSizePaths = async (req, res) => {
     const paths = req.body.paths; // Mảng path truyền vào qua body
 
     if (!Array.isArray(paths)) {
-      return res.status(400).json({ error: 'Paths should be an array' });
+      return res.status(400).json({ error: "Paths should be an array" });
     }
 
-    const sizes = await Promise.all(paths.map(async (p) => {
-      try {
-        const size = await getDirectorySize(p);
-        return { path: p, size };
-      } catch (error) {
-        console.log('error', error);
-        return { path: p, error: `Unable to get size - ${error.message}`, };
-      }
-    }));
+    const sizes = await Promise.all(
+      paths.map(async (p) => {
+        try {
+          const size = await getDirectorySize(p);
+          return { path: p, size };
+        } catch (error) {
+          console.log("error", error);
+          return { path: p, error: `Unable to get size - ${error.message}` };
+        }
+      })
+    );
     res.status(200).json({
       success: true,
       message: "Lấy danh sách dung lượng thành công",
