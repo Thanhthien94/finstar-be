@@ -309,7 +309,7 @@ const migrateCDR = async (req, res) => {
         null,
         options
       );
-      console.log("priceInfo: ", price);
+      // console.log("priceInfo: ", price);
       return price;
     };
     // const priceViettel = await BillModel.findOne(
@@ -351,6 +351,7 @@ const migrateCDR = async (req, res) => {
         `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
+    console.log("results-length: ", results.length);
     let lastData = [];
     for (const result of results) {
       const dst = result.dst === "tdial" ? result.did : result.dst;
@@ -398,7 +399,10 @@ const migrateCDR = async (req, res) => {
         }
         if (vinaphone.includes(checkNumber)) {
           telco = "vinaphone";
-          const priceVinaphone = await findPriceInfo(result.cnum, "priceVinaphone");
+          const priceVinaphone = await findPriceInfo(
+            result.cnum,
+            "priceVinaphone"
+          );
           billID = priceVinaphone?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -415,7 +419,10 @@ const migrateCDR = async (req, res) => {
         }
         if (mobifone.includes(checkNumber)) {
           telco = "mobifone";
-          const priceMobifone = await findPriceInfo(result.cnum, "priceMobifone");
+          const priceMobifone = await findPriceInfo(
+            result.cnum,
+            "priceMobifone"
+          );
           billID = priceMobifone?._id;
           bill =
             Number(billsec) > 0 && Number(billsec) <= 6
@@ -503,6 +510,7 @@ const migrateCDR = async (req, res) => {
         const check = await CDRModel.findOne(data);
         if (!check) {
           lastData.push(data);
+          console.log("process: ", (lastData.length / results.length) * 100);
         }
       }
     }
