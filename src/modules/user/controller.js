@@ -345,6 +345,7 @@ const updateUser = async (req, res) => {
     const findUser = await UserModel.findOne({ username }).populate("role");
     if (findUser?.role.find((role) => role.name === "root"))
       throw new Error("Can not change user root");
+
     const updateUserTags = async (userId, newTags) => {
       await UserModel.findByIdAndUpdate(userId, { usersTag: newTags });
       const user = await UserModel.findById(userId).populate("usersTag");
@@ -368,11 +369,28 @@ const updateUser = async (req, res) => {
       const allTags = await getAllTags(user);
       newTags.forEach(allTags.add, allTags);
 
-      const news = Array.from(allTags);
+      const newUsersTag = Array.from(allTags);
       // console.log("user2: ", user);
-      // console.log("new: ", news);
-      await UserModel.findByIdAndUpdate(user._id, { usersTag: news });
-      // await user.save();
+      console.log("newUsersTag: ", newUsersTag);
+      const update = await UserModel.findByIdAndUpdate(user._id, { usersTag: newUsersTag });
+      console.log('update user: ', update)
+      if (sipAccount) {
+        const update = await SipModel.findByIdAndUpdate(
+          sipAccount,
+          {
+            user: findUser._id,
+            usersTag: newUsersTag,
+            company: company || findUser.company,
+          },
+          { new: true }
+        )
+          .lean()
+          .exec();
+        const dataElasticUpdate = { sipAccount: update };
+        const id = findUser._id;
+        // console.log("id: ", id);
+        await updateDocument("finstar", id, dataElasticUpdate);
+      }
     };
 
     if (!sipAccount) {
@@ -392,24 +410,7 @@ const updateUser = async (req, res) => {
       console.log("id: ", id);
       await updateDocument("finstar", findUser._id, dataElasticUpdate);
     }
-    if (sipAccount) {
-      const update = await SipModel.findByIdAndUpdate(
-        sipAccount,
-        {
-          user: findUser._id,
-          usersTag: usersTag || findUser.usersTag,
-          company: company || findUser.company,
-        },
-        { new: true }
-      )
-        .lean()
-        .exec();
-      console.log("update SIP account: ", update);
-      const dataElasticUpdate = { sipAccount: update };
-      const id = findUser._id;
-      console.log("id: ", id);
-      await updateDocument("finstar", id, dataElasticUpdate);
-    }
+    
     if (status === "Locked") {
       const update = await UserModel.findOneAndUpdate(
         { username },
@@ -685,12 +686,15 @@ const getSIPs = async (req, res) => {
     const { filters, options } = getParams(req);
     let filter = {};
     const user = await UserModel.findById(_id);
-    if (!role.includes("root")) filter = { company: user.company };
+
+    console.log('user: ', user);
+    if (!role.includes("root")) filter = {...filter, company: user.company, usersTag: user._id };
     const data = await SipModel.find(
       { $and: [filter, filters] },
       null,
       options
     ).populate("pbx");
+    // console.log('data: ', data);
     res
       .status(200)
       .json({ success: true, message: "Get list successful", data });
