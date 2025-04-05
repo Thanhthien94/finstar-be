@@ -5,4 +5,4 @@ uploads
 .log
 development*
 events*
-log
+log/*
