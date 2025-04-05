@@ -6,6 +6,7 @@ import {
   CDR_MODEL,
   COMPANY_MODEL,
   BILL_MODEL,
+  SIPLOG_MODEL,
 } from "../constant.js";
 
 const Schema = mongoose.Schema;
@@ -38,6 +39,16 @@ const CDRSchema = new Schema(
     disposition: { type: String },
     lastapp: { type: String },
     linkRecord: { type: String },
+     // Thêm trường mới cho tham chiếu đến SIP logs
+     sipLogs: [{ 
+      type: Schema.Types.ObjectId, 
+      ref: SIPLOG_MODEL 
+    }],
+    // Thêm trường để lưu trữ chi tiết kỹ thuật
+    techDetails: {
+      type: Schema.Types.Mixed,
+      default: {}
+    }
   },
   {
     minimize: false,

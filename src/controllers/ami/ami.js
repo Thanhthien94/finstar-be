@@ -17,6 +17,7 @@ import {
   SipModel,
   TelcoModel,
   BillModel,
+  SipLogModel,
 } from "../mongodb/index.js";
 import mysqlInstance from "../mysql/index.js";
 
@@ -393,6 +394,9 @@ const checkDuplicate = async () => {
     console.log({ error });
   }
 };
+
+// Cập nhật hàm updateCDR trong controllers/ami/ami.js
+
 async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
   try {
     if (NODE_ENV !== "prod") return;
@@ -404,6 +408,8 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
 
     const options = {};
     options.sort = { createdAt: -1 };
+
+    // Chức năng tìm thông tin giá
     const findPriceInfo = async (cnum, type) => {
       const sip = await SipModel.findOne({ extension: cnum });
       const { company } = sip;
@@ -415,27 +421,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
       console.log("priceInfo: ", price);
       return price;
     };
-    // const priceViettel = await BillModel.findOne(
-    //   { type: "priceViettel" },
-    //   null,
-    //   options
-    // );
-    // const priceVinaphone = await BillModel.findOne(
-    //   { type: "priceVinaphone" },
-    //   null,
-    //   options
-    // );
-    // const priceMobifone = await BillModel.findOne(
-    //   { type: "priceMobifone" },
-    //   null,
-    //   options
-    // );
-    // const priceOthers = await BillModel.findOne(
-    //   { type: "priceOthers" },
-    //   null,
-    //   options
-    // );
-    // console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
+
     const telco = await TelcoModel.find().lean().exec();
     const { viettel, vinaphone, mobifone, others } = telco[0];
     const SIPs = await SipModel.find().populate("user").populate("usersTag");
@@ -444,15 +430,13 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
     if (!listCnum.includes(CNUM)) return;
 
     const lastapp = "Dial";
-    // const filter = ` WHERE (cnum IN (${listCnum}) OR src IN (${listCnum})) AND lastapp IN ('${lastapp}') AND calldate >= ${JSON.stringify(
-    //   getTime
-    // )}`;
+    // Tạo bộ lọc SQL để lấy dữ liệu cuộc gọi từ bảng CDR trong MySQL
     const filter = ` WHERE lastapp IN ('${lastapp}') AND src IN ('${SRC}') AND dst IN ('${DST}') AND dcontext IN ('${DCONTEXT}') AND uniqueid IN ('${UNIQUEID}') ORDER BY calldate DESC`;
     console.log({ filter });
 
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
-        `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
+        `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp, uniqueid FROM cdr${filter}`
       ),
     ]);
     console.log("results: ", results);
@@ -465,12 +449,17 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
       let bill2 = 0;
       let bill3 = 0;
       let billID = null;
+      
+      // Tìm thông tin khách hàng từ số điện thoại
       const customer = await CustomerModel.findOne({ phone: dst });
+      
+      // Tìm thông tin user từ SIP extension
       const findUser = SIPs.find(
         (sip) =>
           (sip.extension === result.cnum || sip.extension === result.src) &&
           sip.company
       );
+      
       if (findUser) {
         const user = findUser.user._id;
         const company = findUser.user.company;
@@ -484,6 +473,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
             ? 1
             : result.billsec;
 
+        // Xác định nhà mạng và tính toán chi phí
         if (viettel.includes(checkNumber)) {
           telco = "viettel";
           const priceViettel = await findPriceInfo(result.cnum, "priceViettel");
@@ -558,6 +548,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
               ? (Number(priceOthers?.price3 || 0) / 60) * 6
               : (Number(priceOthers?.price3 || 0) / 60) * Number(billsec);
         }
+        
         const dstName = customer?.name;
         const dstID =
           (customer?.userTag &&
@@ -574,6 +565,7 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
         const cnum = result.cnum;
         const cnam = result.cnam;
         const duration = result.duration;
+        const uniqueid = result.uniqueid;
 
         const lastapp = result.lastapp;
         const linkRecord =
@@ -588,6 +580,17 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
               }`
             : "";
         const createdAt = result.calldate;
+        
+        // Thêm chi tiết kỹ thuật cho debug và phân tích
+        const techDetails = {
+          uniqueid,
+          dcontext: DCONTEXT,
+          originalSrc: SRC,
+          originalDst: DST,
+          timestamp: new Date()
+        };
+        
+        // Tạo đối tượng CDR
         const data = {
           user,
           usersTag,
@@ -610,16 +613,63 @@ async function updateCDR(SRC, CNUM, DST, DCONTEXT, UNIQUEID) {
           lastapp,
           linkRecord,
           createdAt,
+          techDetails,
         };
-        const check = await CDRModel.findOne(data);
+        
+        // Kiểm tra xem CDR này đã tồn tại trong MongoDB chưa
+        const check = await CDRModel.findOne({
+          user,
+          src,
+          cnum,
+          dst,
+          billsec,
+          createdAt,
+        });
+        
         if (!check) {
+          // Nếu chưa tồn tại, tạo bản ghi CDR mới
+          const newCdr = await CDRModel.create(data);
           lastData.push(data);
+          
+          // Tìm các SIP logs có liên quan đến cuộc gọi này
+          const relatedSipLogs = await SipLogModel.find({
+            $or: [
+              { fromUser: cnum, toUser: dst },
+              { fromUser: dst, toUser: cnum },
+              { callId: { $regex: uniqueid } }
+            ],
+            timestamp: {
+              $gte: new Date(new Date(createdAt).getTime() - 5 * 60 * 1000),
+              $lte: new Date(new Date(createdAt).getTime() + 5 * 60 * 1000)
+            }
+          });
+          
+          // Nếu có SIP logs liên quan, liên kết chúng với CDR
+          if (relatedSipLogs && relatedSipLogs.length > 0) {
+            const sipLogIds = relatedSipLogs.map(log => log._id);
+            await CDRModel.findByIdAndUpdate(newCdr._id, {
+              sipLogs: sipLogIds
+            });
+            
+            // Cập nhật các SIP logs để liên kết với CDR
+            for (const sipLog of relatedSipLogs) {
+              await SipLogModel.findByIdAndUpdate(sipLog._id, {
+                cdrId: newCdr._id
+              });
+            }
+            
+            console.log(`Linked ${relatedSipLogs.length} SIP logs with CDR ${newCdr._id}`);
+          }
         }
       }
     }
 
-    // console.log({ lastData });
-    await CDRModel.insertMany(lastData);
+    // Lưu dữ liệu CDR mới vào MongoDB
+    if (lastData.length > 0) {
+      console.log(`Inserted ${lastData.length} new CDR records`);
+    }
+    
+    // Kiểm tra trùng lặp
     setTimeout(() => {
       checkDuplicate();
     }, 60 * 1000);

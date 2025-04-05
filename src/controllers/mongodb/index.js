@@ -22,6 +22,7 @@ import { TelcoModel } from "./models/Telco.js";
 import { RoleModel } from "./models/Role.js";
 import { BillModel } from "./models/Bill.js";
 import { AccessibilityModel } from "./models/Accessibility.js";
+import { SipLogModel } from "./models/SIPLog.js";
 
 // const OPPTIONS = {
 //   useNewUrlParser: true,
@@ -105,4 +106,5 @@ export {
   SipModel,
   BillModel,
   AccessibilityModel,
+  SipLogModel,
 }
