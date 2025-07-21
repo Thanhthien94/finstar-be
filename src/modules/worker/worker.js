@@ -21,52 +21,73 @@ const ASTERISK_CONFIG_PATH =
 
 const finstarID = "66472fdae4a52ad5e816e0a0";
 
-const checkDuplicate = async () => {
+const checkDuplicate = async (options = {}) => {
   try {
     if (NODE_ENV !== "prod") return;
-    const data = await CDRModel.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000),
-          },
-        },
-      },
 
-      {
-        $group: {
-          _id: {
-            billsec: "$billsec",
-            cnum: "$cnum",
-            dst: "$dst",
-            createdAt: "$createdAt",
-          },
-          ids: { $push: "$_id" },
-          count: { $sum: 1 },
-        },
-      },
-      {
-        $match: {
-          count: { $gt: 1 }, // lọc những nhóm có nhiều hơn 1 bản ghi
-        },
-      },
-    ]);
-    data.forEach(async (doc) => {
-      // giữ lại một bản ghi, xóa các bản ghi khác
-      await CDRModel.deleteMany({
-        _id: { $in: doc.ids.slice(1) }, // xóa các bản ghi trừ bản đầu tiên
-      });
+    console.log("🔄 Starting automated duplicate check...");
+
+    // Import helper functions
+    const { performDuplicateCheck } = await import('../cdr/duplicateHelper.js');
+
+    // Default options for background check
+    const {
+      daysBack = 30,
+      removeMode = 'remove', // Auto remove in production
+      companyId = finstarID
+    } = options;
+
+    // Calculate time range
+    const now = new Date();
+    const fromDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    const toDate = now;
+
+    // Perform comprehensive duplicate check
+    const result = await performDuplicateCheck({
+      fromDate,
+      toDate,
+      removeMode,
+      includeCnum: true,
+      companyId
     });
-    console.log("data check duplicate length: ", data.length);
-    if (data.length > 0) {
-      CompanyModel.findByIdAndUpdate(finstarID, {
-        $push: {
-          note: { checkDuplicate: data, length: data.length, date: new Date() },
-        },
-      });
+
+    console.log(`✅ Automated duplicate check completed: ${result.message}`);
+
+    // Additional logging for production monitoring
+    if (result.stats.totalGroups > 0) {
+      console.log(`⚠️  Found ${result.stats.totalGroups} duplicate groups with ${result.stats.totalRecords} total records`);
+
+      if (result.removalStats) {
+        console.log(`🗑️  Removed ${result.removalStats.totalRemoved} duplicate records`);
+
+        if (result.removalStats.errors > 0) {
+          console.error(`❌ ${result.removalStats.errors} errors during removal:`, result.removalStats.errorDetails);
+        }
+      }
     }
+
+    return result;
+
   } catch (error) {
-    console.log({ error });
+    console.error("❌ Automated duplicate check failed:", error);
+
+    // Log error to company notes for monitoring
+    try {
+      if (finstarID) {
+        await CompanyModel.findByIdAndUpdate(finstarID, {
+          $push: {
+            note: {
+              type: 'duplicateCheckError',
+              error: error.message,
+              timestamp: new Date(),
+              environment: NODE_ENV
+            }
+          }
+        });
+      }
+    } catch (logError) {
+      console.error("❌ Failed to log error to company notes:", logError);
+    }
   }
 };
 const updateCDR = async () => {
@@ -926,6 +947,55 @@ const getSizePaths = async (req, res) => {
   }
 };
 
+// ✅ Manual trigger for duplicate check (for admin/testing)
+const triggerDuplicateCheck = async (req, res) => {
+  try {
+    const { role } = req.decode;
+    if (!role.includes("admin") && !role.includes("root")) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    console.log("🔧 Manual duplicate check triggered by:", req.decode.username);
+
+    // Parse options from query
+    const daysBack = req.query.daysBack ? parseInt(req.query.daysBack) : 30;
+    const removeMode = req.query.remove || 'dryRun'; // Default to dry run for manual triggers
+
+    // Validate options
+    if (daysBack > 90) {
+      throw new Error("daysBack cannot exceed 90 days");
+    }
+
+    if (!['none', 'dryRun', 'remove'].includes(removeMode)) {
+      throw new Error("Invalid remove mode. Use 'none', 'dryRun', or 'remove'");
+    }
+
+    // Trigger duplicate check
+    const result = await checkDuplicate({
+      daysBack,
+      removeMode,
+      companyId: finstarID
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Manual duplicate check completed",
+      data: {
+        result,
+        triggeredBy: req.decode.username,
+        options: { daysBack, removeMode }
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Manual duplicate check failed:", error);
+    res.status(400).json({
+      success: false,
+      message: `Manual duplicate check failed: ${error.message}`
+    });
+  }
+};
+
 export default {
   fetchCDRToDownload,
   migrateCDR,
@@ -937,4 +1007,6 @@ export default {
   updateRandomList,
   getRandomList,
   getSizePaths,
+  // ✅ New duplicate management
+  triggerDuplicateCheck,
 };

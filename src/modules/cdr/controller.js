@@ -244,47 +244,62 @@ const fetchTalkTime = async (req, res) => {
 };
 const check = async (req, res) => {
   try {
-    const data = await CDRModel.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: new Date(new Date("2024-09-01").getTime()),
-          },
-        },
-      },
+    console.log("🔍 CDR Duplicate Check Request:", req.query);
 
-      {
-        $group: {
-          _id: {
-            billsec: "$billsec",
-            dst: "$dst",
-            createdAt: "$createdAt",
-          },
-          ids: { $push: "$_id" },
-          count: { $sum: 1 },
-        },
-      },
-      {
-        $match: {
-          count: { $gt: 1 }, // lọc những nhóm có nhiều hơn 1 bản ghi
-        },
-      },
-    ]);
-    // data.forEach( async doc => {
-    //   // giữ lại một bản ghi, xóa các bản ghi khác
-    //   await CDRModel.deleteMany({
-    //     _id: { $in: doc.ids.slice(1) }               // xóa các bản ghi trừ bản đầu tiên
-    //   });
-    // });
-    console.log("length: ", data.length);
+    // Import helper functions
+    const { parseTimeRange, performDuplicateCheck } = await import('./duplicateHelper.js');
+
+    // Parse and validate time range from query params
+    const timeRange = parseTimeRange(req.query);
+
+    // Parse additional options
+    const removeMode = req.query.remove || 'none'; // 'none', 'dryRun', 'remove'
+    const includeCnum = req.query.includeCnum !== 'false'; // default true
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+
+    // Validate remove mode
+    if (!['none', 'dryRun', 'remove'].includes(removeMode)) {
+      throw new Error("Invalid remove mode. Use 'none', 'dryRun', or 'remove'");
+    }
+
+    // Perform duplicate check
+    const result = await performDuplicateCheck({
+      fromDate: timeRange.fromDate,
+      toDate: timeRange.toDate,
+      removeMode,
+      includeCnum,
+      limit,
+      companyId: null // No company logging for manual checks
+    });
+
+    // Enhanced response
     res.status(200).json({
       success: true,
-      message: "get list cdr successful",
-      data,
+      message: result.message,
+      data: {
+        duplicates: result.duplicates,
+        stats: result.stats,
+        removalStats: result.removalStats,
+        timeRange: {
+          fromDate: timeRange.fromDate,
+          toDate: timeRange.toDate,
+          daysDiff: timeRange.daysDiff
+        },
+        options: {
+          removeMode,
+          includeCnum,
+          limit
+        }
+      }
     });
+
   } catch (error) {
-    console.log({ error });
-    res.status(400).json({ success: false, message: "Can not get list" });
+    console.error("❌ CDR duplicate check failed:", error);
+    res.status(400).json({
+      success: false,
+      message: `Duplicate check failed: ${error.message}`,
+      error: error.message
+    });
   }
 };
 
@@ -1328,6 +1343,181 @@ const updateLinkRecord = async (req, res) => {
   }
 };
 
+// ✅ New enhanced duplicate management methods
+
+/**
+ * Find duplicates without removing them
+ * GET /api/cdr/duplicates/find?fromDate=2024-01-01&toDate=2024-01-31&includeCnum=true&limit=100
+ */
+const findDuplicates = async (req, res) => {
+  try {
+    console.log("🔍 Find Duplicates Request:", req.query);
+
+    const { parseTimeRange, findDuplicates: findDuplicatesHelper } = await import('./duplicateHelper.js');
+
+    // Parse time range
+    const timeRange = parseTimeRange(req.query);
+
+    // Parse options
+    const includeCnum = req.query.includeCnum !== 'false';
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+
+    // Find duplicates only
+    const result = await findDuplicatesHelper(timeRange.fromDate, timeRange.toDate, {
+      includeCnum,
+      limit
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Found ${result.stats.totalGroups} duplicate groups`,
+      data: {
+        duplicates: result.duplicates,
+        stats: result.stats,
+        timeRange: {
+          fromDate: timeRange.fromDate,
+          toDate: timeRange.toDate,
+          daysDiff: timeRange.daysDiff
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Find duplicates failed:", error);
+    res.status(400).json({
+      success: false,
+      message: `Find duplicates failed: ${error.message}`
+    });
+  }
+};
+
+/**
+ * Remove duplicates with confirmation
+ * POST /api/cdr/duplicates/remove
+ * Body: { fromDate, toDate, confirm: true, dryRun: false }
+ */
+const removeDuplicates = async (req, res) => {
+  try {
+    console.log("🗑️  Remove Duplicates Request:", req.body);
+
+    const { parseTimeRange, performDuplicateCheck } = await import('./duplicateHelper.js');
+
+    // Parse time range from body
+    const timeRange = parseTimeRange(req.body);
+
+    // Parse options
+    const { confirm = false, dryRun = true } = req.body;
+
+    // Safety check
+    if (!confirm) {
+      return res.status(400).json({
+        success: false,
+        message: "Confirmation required. Set 'confirm: true' in request body to proceed."
+      });
+    }
+
+    // Determine remove mode
+    const removeMode = dryRun ? 'dryRun' : 'remove';
+
+    // Get user info for logging
+    const { id: userId } = req.decode;
+    const user = await UserModel.findById(userId).populate('company');
+
+    // Perform duplicate check and removal
+    const result = await performDuplicateCheck({
+      fromDate: timeRange.fromDate,
+      toDate: timeRange.toDate,
+      removeMode,
+      includeCnum: true,
+      companyId: user?.company?._id
+    });
+
+    // Enhanced response
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        stats: result.stats,
+        removalStats: result.removalStats,
+        timeRange: {
+          fromDate: timeRange.fromDate,
+          toDate: timeRange.toDate,
+          daysDiff: timeRange.daysDiff
+        },
+        options: {
+          dryRun,
+          confirm,
+          performedBy: user?.username || 'unknown'
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Remove duplicates failed:", error);
+    res.status(400).json({
+      success: false,
+      message: `Remove duplicates failed: ${error.message}`
+    });
+  }
+};
+
+/**
+ * Get duplicate statistics only
+ * GET /api/cdr/duplicates/stats?fromDate=2024-01-01&toDate=2024-01-31
+ */
+const getDuplicateStats = async (req, res) => {
+  try {
+    console.log("📊 Duplicate Stats Request:", req.query);
+
+    const { parseTimeRange, findDuplicates: findDuplicatesHelper } = await import('./duplicateHelper.js');
+
+    // Parse time range
+    const timeRange = parseTimeRange(req.query);
+
+    // Find duplicates for stats only
+    const result = await findDuplicatesHelper(timeRange.fromDate, timeRange.toDate, {
+      includeCnum: true,
+      limit: null
+    });
+
+    // Calculate additional statistics
+    const duplicatesByCount = {};
+    result.duplicates.forEach(group => {
+      const count = group.count;
+      duplicatesByCount[count] = (duplicatesByCount[count] || 0) + 1;
+    });
+
+    const totalRecordsToRemove = result.duplicates.reduce((sum, group) => sum + (group.count - 1), 0);
+
+    res.status(200).json({
+      success: true,
+      message: "Duplicate statistics retrieved successfully",
+      data: {
+        stats: {
+          ...result.stats,
+          totalRecordsToRemove,
+          duplicatesByCount,
+          averageDuplicatesPerGroup: result.stats.totalGroups > 0
+            ? (result.stats.totalRecords / result.stats.totalGroups).toFixed(2)
+            : 0
+        },
+        timeRange: {
+          fromDate: timeRange.fromDate,
+          toDate: timeRange.toDate,
+          daysDiff: timeRange.daysDiff
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Get duplicate stats failed:", error);
+    res.status(400).json({
+      success: false,
+      message: `Get duplicate stats failed: ${error.message}`
+    });
+  }
+};
+
 export default {
   fetchTalkTime,
   fetchTalkTimeToDownload,
@@ -1339,4 +1529,8 @@ export default {
   fetchCDRMongo,
   check,
   updateLinkRecord,
+  // ✅ New duplicate management methods
+  findDuplicates,
+  removeDuplicates,
+  getDuplicateStats,
 };

@@ -6,6 +6,10 @@ const { verifyToken } = auth;
 const Route = express.Router()
 Route.post('/cdr/downloadCDR', verifyToken, worker.fetchCDRToDownload)
 Route.get('/migrateCDR', verifyToken, worker.migrateCDR)
+
+// ✅ Enhanced duplicate management
+Route.post('/duplicates/check', verifyToken, worker.triggerDuplicateCheck)
+
 Route.get('/iptables/rule', verifyToken, worker.getRuleIptables)
 Route.post('/iptables/blacklist', verifyToken, worker.addBlackList)
 Route.delete('/iptables/blacklist', verifyToken, worker.removeRule)

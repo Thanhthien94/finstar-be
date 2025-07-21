@@ -7,7 +7,13 @@ const {verifyToken} = auth
 
 // Route.post('/register', call.register)
 Route.get('/', verifyToken, cdr.fetchCDRMongo)
-Route.get('/check', cdr.check)
+
+// ✅ Enhanced duplicate management routes
+Route.get('/check', cdr.check) // Enhanced with time range params
+Route.get('/duplicates/find', verifyToken, cdr.findDuplicates) // New: Find only
+Route.post('/duplicates/remove', verifyToken, cdr.removeDuplicates) // New: Remove with confirmation
+Route.get('/duplicates/stats', verifyToken, cdr.getDuplicateStats) // New: Statistics only
+
 Route.get('/migrateCDR', verifyToken, cdr.migrateCDR)
 Route.get('/download', verifyToken, cdr.fetchCDRToDownload)
 Route.get('/talktime', verifyToken, cdr.fetchTalkTime)
