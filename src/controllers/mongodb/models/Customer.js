@@ -49,6 +49,7 @@ const CustomerSchema = new Schema(
 );
 
 CustomerSchema.index({ name: 1 });
+CustomerSchema.index({ phone: 1 }); // Index for phone lookup in migrateCDR
 CustomerSchema.plugin(mongoosePaginate);
 
 // interface UserModel<T extends Document> extends PaginateModel<T> {};

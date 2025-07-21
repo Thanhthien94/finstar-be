@@ -27,6 +27,7 @@ const SipSchema = new Schema(
 );
 
 SipSchema.index({ name: 1 });
+SipSchema.index({ extension: 1 }); // Index for extension lookup in migrateCDR
 SipSchema.plugin(mongoosePaginate);
 
 // interface UserModel<T extends Document> extends PaginateModel<T> {};
