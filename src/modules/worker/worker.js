@@ -297,48 +297,82 @@ const migrateCDR = async (req, res) => {
     const infor = await UserModel.findById(id).populate("company");
     if (infor?.company?.statusMigrate)
       throw new Error("have 1 processing, please wait and try again later");
-    const [users] = await Bluebird.all([UserModel.find().lean().exec()]);
-    const options = {};
-    options.sort = { createdAt: -1 };
 
+    console.log("🚀 Starting optimized CDR migration...");
+    const startTime = Date.now();
+
+    // ✅ Phase 1: Pre-load all reference data in parallel
+    console.log("📊 Loading reference data...");
+    const [telcoData, SIPs, customers] = await Bluebird.all([
+      TelcoModel.find().lean().exec(),
+      SipModel.find().populate("user").populate("usersTag").lean().exec(),
+      CustomerModel.find().lean().exec()
+    ]);
+
+    if (!telcoData.length) throw new Error("Telco data not found");
+    const { viettel, vinaphone, mobifone, others } = telcoData[0];
+
+    // ✅ Phase 2: Create O(1) lookup maps
+    console.log("🗺️  Building lookup maps...");
+    const sipMap = new Map();
+    const customerMap = new Map();
+    const priceCache = new Map();
+
+    // Build SIP lookup map
+    SIPs.forEach(sip => {
+      if (sip.extension) {
+        sipMap.set(sip.extension, sip);
+      }
+    });
+
+    // Build customer lookup map
+    customers.forEach(customer => {
+      if (customer.phone) {
+        customerMap.set(customer.phone, customer);
+      }
+    });
+
+    console.log(`✅ Loaded ${SIPs.length} SIPs and ${customers.length} customers into lookup maps`);
+
+    // ✅ Optimized price lookup with caching
     const findPriceInfo = async (cnum, type) => {
-      const sip = await SipModel.findOne({ extension: cnum });
-      const { company } = sip;
+      const cacheKey = `${cnum}-${type}`;
+      if (priceCache.has(cacheKey)) {
+        return priceCache.get(cacheKey);
+      }
+
+      const sip = sipMap.get(cnum);
+      if (!sip?.company) return null;
+
       const price = await BillModel.findOne(
-        { type: type, company },
+        { type: type, company: sip.company },
         null,
-        options
-      );
-      // console.log("priceInfo: ", price);
+        { sort: { createdAt: -1 } }
+      ).lean();
+
+      priceCache.set(cacheKey, price);
       return price;
     };
-    // const priceViettel = await BillModel.findOne(
-    //   { type: "priceViettel" },
-    //   null,
-    //   options
-    // );
-    // const priceVinaphone = await BillModel.findOne(
-    //   { type: "priceVinaphone" },
-    //   null,
-    //   options
-    // );
-    // const priceMobifone = await BillModel.findOne(
-    //   { type: "priceMobifone" },
-    //   null,
-    //   options
-    // );
-    // const priceOthers = await BillModel.findOne(
-    //   { type: "priceOthers" },
-    //   null,
-    //   options
-    // );
-    // console.log({ priceViettel, priceVinaphone, priceMobifone, priceOthers });
-    const telco = await TelcoModel.find().lean().exec();
-    const { viettel, vinaphone, mobifone, others } = telco[0];
-    const SIPs = await SipModel.find().populate("user").populate("usersTag");
-    // console.log("SIPs: ", SIPs)
-    const listCnum = SIPs.map((item) => item.extension);
-    if (!listCnum && !users.toString()) throw new Error("List not exist");
+    // ✅ Phase 3: Helper functions
+    const getTelcoFromNumber = (phoneNumber) => {
+      const checkNumber = phoneNumber.slice(0, 3);
+      if (viettel.includes(checkNumber)) return "viettel";
+      if (vinaphone.includes(checkNumber)) return "vinaphone";
+      if (mobifone.includes(checkNumber)) return "mobifone";
+      if (others.includes(checkNumber)) return "others";
+      return "";
+    };
+
+    const calculateBill = (billsec, price) => {
+      if (!price) return 0;
+      const effectiveBillsec = Number(billsec) > 0 && Number(billsec) <= 6 ? 6 : Number(billsec);
+      return (Number(price) / 60) * effectiveBillsec;
+    };
+
+    // ✅ Phase 4: Prepare query parameters
+    const listCnum = Array.from(sipMap.keys());
+    if (!listCnum.length) throw new Error("No SIP extensions found");
+
     if (!req.query.cnum) {
       req.query.cnum = listCnum;
     }
@@ -346,183 +380,160 @@ const migrateCDR = async (req, res) => {
     const { filter } = getParamsCDR(req);
     console.log({ filter });
 
+    // ✅ Phase 5: Fetch CDR data from MySQL
     const [results] = await Bluebird.all([
       mysqlInstance.execQuery(
         `SELECT calldate, src, did, dcontext, cnum, dst, duration, billsec, disposition, recordingfile, cnam, lastapp FROM cdr${filter}`
       ),
     ]);
-    console.log("results-length: ", results.length);
-    let lastData = [];
-    for (const result of results) {
-      const dst = result.dst === "tdial" ? result.did : result.dst;
-      const checkNumber = dst.slice(0, 3);
-      let telco = "";
-      let bill = 0;
-      let bill2 = 0;
-      let bill3 = 0;
-      let billID = null;
-      const customer = await CustomerModel.findOne({ phone: dst });
-      const findUser = SIPs.find(
-        (sip) =>
-          (sip.extension === result.cnum || sip.extension === result.src) &&
-          sip.company
-      );
-      if (findUser) {
-        const user = findUser.user._id;
-        const company = findUser.user.company;
-        const usersTag = findUser.usersTag?.map((item) => item._id);
-        const name = findUser.user.name;
-        const disposition = result.disposition;
-        const billsec =
-          result.disposition === "NO ANSWER" && result.billsec > 0
-            ? 0
-            : result.disposition === "ANSWERED" && result.billsec === 0
-            ? 1
-            : result.billsec;
+    console.log(`📊 Processing ${results.length} CDR records...`);
 
-        if (viettel.includes(checkNumber)) {
-          telco = "viettel";
-          const priceViettel = await findPriceInfo(result.cnum, "priceViettel");
-          billID = priceViettel?._id;
-          bill =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceViettel?.price || 0) / 60) * 6
-              : (Number(priceViettel?.price || 0) / 60) * Number(billsec);
-          bill2 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceViettel?.price2 || 0) / 60) * 6
-              : (Number(priceViettel?.price2 || 0) / 60) * Number(billsec);
-          bill3 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceViettel?.price3 || 0) / 60) * 6
-              : (Number(priceViettel?.price3 || 0) / 60) * Number(billsec);
-        }
-        if (vinaphone.includes(checkNumber)) {
-          telco = "vinaphone";
-          const priceVinaphone = await findPriceInfo(
-            result.cnum,
-            "priceVinaphone"
-          );
-          billID = priceVinaphone?._id;
-          bill =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceVinaphone?.price || 0) / 60) * 6
-              : (Number(priceVinaphone?.price || 0) / 60) * Number(billsec);
-          bill2 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceVinaphone?.price2 || 0) / 60) * 6
-              : (Number(priceVinaphone?.price2 || 0) / 60) * Number(billsec);
-          bill3 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceVinaphone?.price3 || 0) / 60) * 6
-              : (Number(priceVinaphone?.price3 || 0) / 60) * Number(billsec);
-        }
-        if (mobifone.includes(checkNumber)) {
-          telco = "mobifone";
-          const priceMobifone = await findPriceInfo(
-            result.cnum,
-            "priceMobifone"
-          );
-          billID = priceMobifone?._id;
-          bill =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceMobifone?.price || 0) / 60) * 6
-              : (Number(priceMobifone?.price || 0) / 60) * Number(billsec);
-          bill2 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceMobifone?.price2 || 0) / 60) * 6
-              : (Number(priceMobifone?.price2 || 0) / 60) * Number(billsec);
-          bill3 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceMobifone?.price3 || 0) / 60) * 6
-              : (Number(priceMobifone?.price3 || 0) / 60) * Number(billsec);
-        }
-        if (others.includes(checkNumber)) {
-          telco = "others";
-          const priceOthers = await findPriceInfo(result.cnum, "priceOthers");
-          billID = priceOthers?._id;
-          bill =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceOthers?.price || 0) / 60) * 6
-              : (Number(priceOthers?.price || 0) / 60) * Number(billsec);
-          bill2 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceOthers?.price2 || 0) / 60) * 6
-              : (Number(priceOthers?.price2 || 0) / 60) * Number(billsec);
-          bill3 =
-            Number(billsec) > 0 && Number(billsec) <= 6
-              ? (Number(priceOthers?.price3 || 0) / 60) * 6
-              : (Number(priceOthers?.price3 || 0) / 60) * Number(billsec);
-        }
-        const dstName = customer?.name;
-        const dstID =
-          (customer?.userTag &&
-            customer?.userTag.toString() === user.toString()) ||
-          (customer?.salesTag &&
-            customer?.salesTag.toString() === user.toString()) ||
-          (customer?.teamleadTag &&
-            customer?.teamleadTag.toString() === user.toString()) ||
-          (customer?.supervisorTag &&
-            customer?.supervisorTag.toString() === user.toString())
-            ? customer?._id
-            : null;
-        const src = result.src;
-        const cnum = result.cnum;
-        const cnam = result.cnam;
-        const duration = result.duration;
+    if (!results.length) {
+      return res.status(200).json({
+        success: true,
+        message: "No CDR data found for the specified criteria",
+      });
+    }
 
-        const lastapp = result.lastapp;
-        const linkRecord =
-          result.recordingfile && result.lastapp === "Dial"
-            ? `https://${DOMAIN}/admin/recordings/${String(
-                result.recordingfile.split("-")[3]
-              ).slice(0, 4)}/${String(result.recordingfile.split("-")[3]).slice(
-                4,
-                6
-              )}/${String(result.recordingfile.split("-")[3]).slice(6, 8)}/${
-                result.recordingfile
-              }`
-            : "";
-        const createdAt = result.calldate;
-        const data = {
-          user,
-          usersTag,
-          company,
-          name,
-          dstName,
-          dstID,
-          src,
-          cnum,
-          cnam,
-          dst,
-          telco,
-          duration,
-          billsec,
-          bill,
-          bill2,
-          bill3,
-          billID,
-          disposition,
-          lastapp,
-          linkRecord,
-          createdAt,
-        };
-        const check = await CDRModel.findOne(data);
-        if (!check) {
-          lastData.push(data);
-          console.log(
-            "process: ",
-            ((lastData.length / results.length) * 100).toFixed(2),
-            "%"
-          );
+    // ✅ Phase 6: Batch processing for better memory management
+    const BATCH_SIZE = 1000;
+    let totalInserted = 0;
+    let processedCount = 0;
+
+    for (let i = 0; i < results.length; i += BATCH_SIZE) {
+      const batch = results.slice(i, i + BATCH_SIZE);
+      const batchData = [];
+
+      console.log(`🔄 Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(results.length / BATCH_SIZE)}`);
+
+      for (const result of batch) {
+        processedCount++;
+        const dst = result.dst === "tdial" ? result.did : result.dst;
+        const telcoType = getTelcoFromNumber(dst);
+
+        // ✅ Use O(1) cached lookups instead of database queries
+        const customer = customerMap.get(dst);
+        const findUser = sipMap.get(result.cnum) || sipMap.get(result.src);
+
+        if (findUser && findUser.company) {
+          const user = findUser.user._id;
+          const company = findUser.user.company;
+          const usersTag = findUser.usersTag?.map((item) => item._id);
+          const name = findUser.user.name;
+          const disposition = result.disposition;
+          const billsec =
+            result.disposition === "NO ANSWER" && result.billsec > 0
+              ? 0
+              : result.disposition === "ANSWERED" && result.billsec === 0
+              ? 1
+              : result.billsec;
+
+          // ✅ Optimized price calculation using helper functions
+          let bill = 0, bill2 = 0, bill3 = 0, billID = null;
+
+          if (telcoType) {
+            const priceType = `price${telcoType.charAt(0).toUpperCase() + telcoType.slice(1)}`;
+            const priceInfo = await findPriceInfo(result.cnum, priceType);
+
+            if (priceInfo) {
+              billID = priceInfo._id;
+              bill = calculateBill(billsec, priceInfo.price);
+              bill2 = calculateBill(billsec, priceInfo.price2);
+              bill3 = calculateBill(billsec, priceInfo.price3);
+            }
+          }
+          const dstName = customer?.name;
+          const dstID =
+            (customer?.userTag &&
+              customer?.userTag.toString() === user.toString()) ||
+            (customer?.salesTag &&
+              customer?.salesTag.toString() === user.toString()) ||
+            (customer?.teamleadTag &&
+              customer?.teamleadTag.toString() === user.toString()) ||
+            (customer?.supervisorTag &&
+              customer?.supervisorTag.toString() === user.toString())
+              ? customer?._id
+              : null;
+
+          const linkRecord =
+            result.recordingfile && result.lastapp === "Dial"
+              ? `https://${DOMAIN}/admin/recordings/${String(
+                  result.recordingfile.split("-")[3]
+                ).slice(0, 4)}/${String(result.recordingfile.split("-")[3]).slice(
+                  4,
+                  6
+                )}/${String(result.recordingfile.split("-")[3]).slice(6, 8)}/${
+                  result.recordingfile
+                }`
+              : "";
+          const data = {
+            user,
+            usersTag,
+            company,
+            name,
+            dstName,
+            dstID,
+            src: result.src,
+            cnum: result.cnum,
+            cnam: result.cnam,
+            dst,
+            telco: telcoType,
+            duration: result.duration,
+            billsec,
+            bill,
+            bill2,
+            bill3,
+            billID,
+            disposition,
+            lastapp: result.lastapp,
+            linkRecord,
+            createdAt: result.calldate,
+          };
+
+          batchData.push(data);
+        }
+
+        // Progress tracking
+        if (processedCount % 100 === 0) {
+          console.log(`📊 Progress: ${((processedCount / results.length) * 100).toFixed(2)}%`);
+        }
+      }
+
+      // ✅ Batch insert with duplicate handling
+      if (batchData.length > 0) {
+        try {
+          const insertResult = await CDRModel.insertMany(batchData, {
+            ordered: false,
+            rawResult: true
+          });
+          totalInserted += insertResult.insertedCount || batchData.length;
+          console.log(`✅ Batch inserted: ${insertResult.insertedCount || batchData.length} records`);
+        } catch (error) {
+          // Handle duplicate key errors gracefully
+          if (error.code === 11000) {
+            console.log(`⚠️  Batch had ${error.writeErrors?.length || 0} duplicates, continuing...`);
+            const successfulInserts = batchData.length - (error.writeErrors?.length || 0);
+            totalInserted += successfulInserts;
+          } else {
+            throw error;
+          }
         }
       }
     }
-    // console.log({ lastData });
-    await CDRModel.insertMany(lastData);
+
+    const endTime = Date.now();
+    const duration = (endTime - startTime) / 1000;
+
+    console.log(`🎉 Migration completed in ${duration.toFixed(2)}s`);
     res.status(200).json({
       success: true,
-      message: `migarate data cdr successful - ${lastData.length} inserted`,
+      message: `Migration completed successfully - ${totalInserted} records inserted out of ${results.length} processed in ${duration.toFixed(2)}s`,
+      stats: {
+        totalProcessed: results.length,
+        totalInserted,
+        duration: `${duration.toFixed(2)}s`,
+        recordsPerSecond: Math.round(results.length / duration)
+      }
     });
   } catch (error) {
     console.log(error.message);

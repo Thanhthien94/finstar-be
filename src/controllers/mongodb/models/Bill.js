@@ -45,6 +45,7 @@ const BillSchema = new Schema(
 );
 
 BillSchema.index({ name: 1 });
+BillSchema.index({ type: 1, company: 1 }); // Composite index for price lookup in migrateCDR
 BillSchema.plugin(mongoosePaginate);
 
 // interface UserModel<T extends Document> extends PaginateModel<T> {};
