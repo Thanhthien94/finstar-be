@@ -630,6 +630,7 @@ const getRuleIptables = (req, res) => {
         return res.status(500).send(`Error: ${stderr}`);
       }
 
+      console.log("stdout: ", stdout);
       // Chuyển đổi stdout thành mảng các dòng và lọc các địa chỉ IP
       const ipList = stdout
         .split("\n") // Tách mỗi dòng thành một phần tử
